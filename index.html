@@ -407,7 +407,20 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDH1yulaQa9sqCPWqhOEN-wW4Sv35lKf2A",
+  authDomain: "asuntos-internos-d423d.firebaseapp.com",
+  projectId: "asuntos-internos-d423d",
+  storageBucket: "asuntos-internos-d423d.firebasestorage.app",
+  messagingSenderId: "762492805556",
+  appId: "1:762492805556:web:d8ce3f74b8f857b89b92e1"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 let agentes = [];
 let bitacoras = [];
 let sanciones = [];
@@ -424,62 +437,49 @@ function fmtDate(d){
   return `${day}/${m}/${y}`;
 }
 
-// ---------- STORAGE ----------
-async function loadAll(){
-  try{
-    const a = await window.storage.get('ai-agentes', true);
-    agentes = a ? JSON.parse(a.value) : [];
-  }catch(e){ agentes = []; }
-  try{
-    const b = await window.storage.get('ai-bitacoras', true);
-    bitacoras = b ? JSON.parse(b.value) : [];
-  }catch(e){ bitacoras = []; }
-  try{
-    const s = await window.storage.get('ai-sanciones', true);
-    sanciones = s ? JSON.parse(s.value) : [];
-  }catch(e){ sanciones = []; }
-  renderAll();
-}
-async function saveAgentes(){
-  try{ await window.storage.set('ai-agentes', JSON.stringify(agentes), true); }
-  catch(e){ showToast('Error guardando agentes'); }
-}
-async function saveBitacoras(){
-  try{ await window.storage.set('ai-bitacoras', JSON.stringify(bitacoras), true); }
-  catch(e){ showToast('Error guardando bitácoras'); }
-}
-async function saveSanciones(){
-  try{ await window.storage.set('ai-sanciones', JSON.stringify(sanciones), true); }
-  catch(e){ showToast('Error guardando sanciones'); }
+// ---------- STORAGE (Firestore, en tiempo real) ----------
+function initListeners(){
+  db.collection('agentes').onSnapshot(snap=>{
+    agentes = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderAll();
+  }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('bitacoras').onSnapshot(snap=>{
+    bitacoras = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderAll();
+  }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('sanciones').onSnapshot(snap=>{
+    sanciones = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderAll();
+  }, ()=>showToast('Error de conexión con la base de datos'));
 }
 
 // ---------- ACTIONS ----------
 async function addAgente(){
   const nombre = document.getElementById('ag-nombre').value.trim();
   const discord = document.getElementById('ag-discord').value.trim();
-  const rango = document.getElementById('ag-rango').value.trim();
+  const rango = document.getElementById('ag-rango').value;
   if(!nombre){ showToast('Escribe un nombre'); return; }
-  agentes.push({ id: uid(), nombre, discord, rango, estado:'activo' });
-  document.getElementById('ag-nombre').value='';
-  document.getElementById('ag-discord').value='';
-  document.getElementById('ag-rango').value='';
-  await saveAgentes();
-  renderAll();
-  showToast('Agente registrado');
+  try{
+    await db.collection('agentes').doc(uid()).set({ nombre, discord, rango, estado:'activo', creado: Date.now() });
+    document.getElementById('ag-nombre').value='';
+    document.getElementById('ag-discord').value='';
+    showToast('Agente registrado');
+  }catch(e){ showToast('Error al guardar el agente'); }
 }
 
 async function toggleEstadoAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
-  ag.estado = ag.estado === 'activo' ? 'sancionado' : 'activo';
-  await saveAgentes();
-  renderAll();
+  const nuevoEstado = ag.estado === 'activo' ? 'sancionado' : 'activo';
+  try{ await db.collection('agentes').doc(id).update({ estado: nuevoEstado }); }
+  catch(e){ showToast('Error al actualizar'); }
 }
 
 async function eliminarAgente(id){
-  agentes = agentes.filter(a=>a.id!==id);
-  await saveAgentes();
-  renderAll();
+  try{ await db.collection('agentes').doc(id).delete(); }
+  catch(e){ showToast('Error al eliminar'); }
 }
 
 async function addBitacora(){
@@ -488,17 +488,16 @@ async function addBitacora(){
   const desc = document.getElementById('bi-desc').value.trim();
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!fecha){ showToast('Selecciona una fecha'); return; }
-  bitacoras.unshift({ id: uid(), agenteId, fecha, desc });
-  document.getElementById('bi-desc').value='';
-  await saveBitacoras();
-  renderAll();
-  showToast('Bitácora registrada');
+  try{
+    await db.collection('bitacoras').doc(uid()).set({ agenteId, fecha, desc, creado: Date.now() });
+    document.getElementById('bi-desc').value='';
+    showToast('Bitácora registrada');
+  }catch(e){ showToast('Error al guardar la bitácora'); }
 }
 
 async function eliminarBitacora(id){
-  bitacoras = bitacoras.filter(b=>b.id!==id);
-  await saveBitacoras();
-  renderAll();
+  try{ await db.collection('bitacoras').doc(id).delete(); }
+  catch(e){ showToast('Error al eliminar'); }
 }
 
 async function addSancion(){
@@ -509,18 +508,17 @@ async function addSancion(){
   const motivo = document.getElementById('sa-motivo').value.trim();
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!motivo){ showToast('Describe el motivo'); return; }
-  sanciones.unshift({ id: uid(), agenteId, gravedad, fecha, evidencia, motivo });
-  document.getElementById('sa-motivo').value='';
-  document.getElementById('sa-evidencia').value='';
-  await saveSanciones();
-  renderAll();
-  showToast('Sanción aplicada');
+  try{
+    await db.collection('sanciones').doc(uid()).set({ agenteId, gravedad, fecha, evidencia, motivo, creado: Date.now() });
+    document.getElementById('sa-motivo').value='';
+    document.getElementById('sa-evidencia').value='';
+    showToast('Sanción aplicada');
+  }catch(e){ showToast('Error al guardar la sanción'); }
 }
 
 async function eliminarSancion(id){
-  sanciones = sanciones.filter(s=>s.id!==id);
-  await saveSanciones();
-  renderAll();
+  try{ await db.collection('sanciones').doc(id).delete(); }
+  catch(e){ showToast('Error al eliminar'); }
 }
 
 // ---------- RENDER ----------
@@ -635,7 +633,7 @@ document.getElementById('fecha-actual').textContent = new Date().toLocaleDateStr
 document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
 
-loadAll();
+initListeners();
 </script>
 </body>
 </html>
