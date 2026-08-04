@@ -297,7 +297,49 @@
         <div class="form-grid">
           <div class="field"><label>Nombre / Rol</label><input id="ag-nombre" placeholder="Ej. Ofc. J. Ramírez"></div>
           <div class="field"><label>Usuario de Discord</label><input id="ag-discord" placeholder="Ej. ramirez#0421"></div>
-          <div class="field"><label>Rango</label><input id="ag-rango" placeholder="Ej. Patrullero"></div>
+          <div class="field">
+            <label>Rango</label>
+            <select id="ag-rango">
+              <optgroup label="Alto mando">
+                <option value="Director General">Director General</option>
+                <option value="Sub Director">Sub Director</option>
+                <option value="Jefe Departamento">Jefe Departamento</option>
+                <option value="Sub Jefe de Departamento">Sub Jefe de Departamento</option>
+                <option value="Dev. Discord">Dev. Discord</option>
+                <option value="Staff">Staff</option>
+                <option value="Admin Staff Policial">Admin Staff Policial</option>
+              </optgroup>
+              <optgroup label="Divisiones">
+                <option value="DIRECTIVA">DIRECTIVA</option>
+                <option value="DAI">DAI</option>
+                <option value="CICPC">CICPC</option>
+              </optgroup>
+              <optgroup label="Comisarios">
+                <option value="Comisario Superior">Comisario Superior</option>
+                <option value="Comisario General">Comisario General</option>
+                <option value="Primer Comisario">Primer Comisario</option>
+              </optgroup>
+              <optgroup label="Comisionados">
+                <option value="Comisionado Jefe">Comisionado Jefe</option>
+                <option value="Comisionado">Comisionado</option>
+              </optgroup>
+              <optgroup label="Inspectores">
+                <option value="Inspector Jefe">Inspector Jefe</option>
+                <option value="Inspector">Inspector</option>
+              </optgroup>
+              <optgroup label="Oficiales">
+                <option value="Oficial Jefe">Oficial Jefe</option>
+                <option value="Primer Oficial">Primer Oficial</option>
+                <option value="Oficial">Oficial</option>
+                <option value="AGENTE">AGENTE</option>
+              </optgroup>
+              <optgroup label="Base">
+                <option value="Cadete">Cadete</option>
+                <option value="Jubilado">Jubilado</option>
+                <option value="POLICIA">POLICIA</option>
+              </optgroup>
+            </select>
+          </div>
           <div class="field"><button class="btn" onclick="addAgente()">Registrar</button></div>
         </div>
       </div>
