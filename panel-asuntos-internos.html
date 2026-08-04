@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asuntos Internos · Panel de Control</title>
+<style>
+  :root{
+    --navy-950:#0b1016;
+    --navy-900:#111823;
+    --navy-800:#182231;
+    --navy-700:#22303f;
+    --steel-600:#3a4a5a;
+    --paper:#e9e4d8;
+    --paper-dim:#a9a495;
+    --brass:#c9a227;
+    --brass-dim:#8a7222;
+    --red:#b3392c;
+    --red-dim:#5c211b;
+    --green:#4f7a52;
+    --font-display: Georgia, 'Times New Roman', serif;
+    --font-body: 'Segoe UI', -apple-system, sans-serif;
+    --font-mono: 'Courier New', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, rgba(201,162,39,0.06), transparent 45%),
+      var(--navy-950);
+    color: var(--paper);
+    font-family: var(--font-body);
+    min-height:100vh;
+  }
+  .app{ display:flex; min-height:100vh; }
+
+  /* Sidebar */
+  .sidebar{
+    width:230px; flex-shrink:0;
+    background: var(--navy-900);
+    border-right: 1px solid var(--navy-700);
+    padding: 28px 0;
+    display:flex; flex-direction:column;
+  }
+  .brand{
+    padding: 0 22px 24px 22px;
+    border-bottom: 1px solid var(--navy-700);
+    margin-bottom: 18px;
+  }
+  .brand .badge-num{
+    font-family: var(--font-mono);
+    color: var(--brass);
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .brand h1{
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .brand .sub{
+    color: var(--paper-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 3px;
+  }
+  nav{ display:flex; flex-direction:column; padding: 0 12px; gap:2px; }
+  nav button{
+    all:unset; cursor:pointer;
+    display:flex; align-items:center; gap:10px;
+    padding: 11px 14px; border-radius:4px;
+    color: var(--paper-dim);
+    font-size: 13.5px;
+    letter-spacing: 0.3px;
+    border-left: 2px solid transparent;
+  }
+  nav button .n{
+    font-family: var(--font-mono); font-size:11px; color: var(--steel-600);
+  }
+  nav button:hover{ background: var(--navy-800); color: var(--paper); }
+  nav button.active{
+    background: var(--navy-800); color: var(--brass);
+    border-left: 2px solid var(--brass);
+  }
+  nav button.active .n{ color: var(--brass-dim); }
+
+  .sidebar-footer{
+    margin-top:auto; padding: 16px 22px; border-top:1px solid var(--navy-700);
+    font-size: 10.5px; color: var(--steel-600); font-family: var(--font-mono);
+    line-height:1.6;
+  }
+
+  /* Main */
+  main{ flex:1; padding: 34px 44px; max-width: 1180px; }
+  .view{ display:none; }
+  .view.active{ display:block; animation: fade .25s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  header.top{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom: 28px; padding-bottom:16px; border-bottom:1px solid var(--navy-700);
+  }
+  header.top h2{ font-family: var(--font-display); font-size: 26px; }
+  header.top .stamp{
+    font-family: var(--font-mono); font-size:11px; color: var(--paper-dim);
+    letter-spacing:1px; text-align:right;
+  }
+
+  /* Dashboard cards */
+  .grid-cards{ display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; margin-bottom:30px; }
+  .card{
+    background: var(--navy-900); border:1px solid var(--navy-700); border-radius:6px;
+    padding: 18px 20px; position:relative; overflow:hidden;
+  }
+  .card::before{
+    content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+    background: var(--brass-dim);
+  }
+  .card .label{ font-size:10.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--paper-dim); }
+  .card .value{ font-family: var(--font-display); font-size: 32px; margin-top:6px; color: var(--brass); }
+  .card.alert::before{ background: var(--red); }
+  .card.alert .value{ color: var(--red); }
+
+  .section-title{
+    font-family: var(--font-mono); font-size:11px; letter-spacing:2px;
+    color: var(--paper-dim); text-transform:uppercase;
+    margin: 30px 0 12px 0; display:flex; align-items:center; gap:10px;
+  }
+  .section-title::after{ content:''; flex:1; height:1px; background:var(--navy-700); }
+
+  /* Table */
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:1px;
+    color: var(--paper-dim); padding: 8px 12px; border-bottom:1px solid var(--navy-700);
+  }
+  tbody td{
+    padding: 12px; font-size: 13.5px; border-bottom:1px solid var(--navy-800);
+    vertical-align: middle;
+  }
+  tbody tr:hover{ background: rgba(255,255,255,0.02); }
+  .mono{ font-family: var(--font-mono); color: var(--paper-dim); font-size:12px; }
+  .tally{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:26px; height:26px; padding:0 6px; border-radius:4px;
+    background: var(--navy-800); border:1px solid var(--navy-700);
+    font-family: var(--font-mono); font-size:12px; color: var(--brass);
+  }
+  .pill{
+    display:inline-block; padding:3px 9px; border-radius:20px; font-size:10.5px;
+    letter-spacing:0.5px; text-transform:uppercase; font-weight:600;
+  }
+  .pill.activo{ background: rgba(79,122,82,0.15); color:#8fbf92; border:1px solid rgba(79,122,82,0.4); }
+  .pill.sancionado{ background: rgba(179,57,44,0.15); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
+  .pill.leve{ background:rgba(201,162,39,0.15); color:var(--brass); border:1px solid rgba(201,162,39,0.4); }
+  .pill.grave{ background:rgba(179,57,44,0.18); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
+  .pill.baja{ background:rgba(179,57,44,0.3); color:#ffb3a4; border:1px solid var(--red); }
+
+  .empty{
+    padding: 40px 20px; text-align:center; color: var(--steel-600);
+    font-family: var(--font-mono); font-size:12px; letter-spacing:0.5px;
+  }
+
+  /* Forms */
+  .panel{
+    background: var(--navy-900); border:1px solid var(--navy-700); border-radius:6px;
+    padding: 20px 22px; margin-bottom: 24px;
+  }
+  .panel h3{ font-family:var(--font-display); font-size:15px; margin-bottom:14px; color:var(--paper); }
+  .form-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px; align-items:end; }
+  .field label{
+    display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--paper-dim); margin-bottom:6px;
+  }
+  .field input, .field select, .field textarea{
+    width:100%; background: var(--navy-950); border:1px solid var(--navy-700);
+    color: var(--paper); padding: 9px 10px; border-radius:4px; font-size:13px;
+    font-family: var(--font-body);
+  }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none; border-color: var(--brass-dim);
+  }
+  .btn{
+    all:unset; cursor:pointer; background: var(--brass); color: var(--navy-950);
+    font-weight:700; font-size:12.5px; letter-spacing:0.5px; text-align:center;
+    padding: 10px 16px; border-radius:4px; text-transform:uppercase;
+  }
+  .btn:hover{ background:#dcb432; }
+  .btn.secondary{
+    background: transparent; color: var(--paper-dim); border:1px solid var(--navy-700);
+  }
+  .btn.secondary:hover{ color:var(--paper); border-color:var(--steel-600); }
+  .btn.danger{ background: var(--red); color:#fff; }
+  .btn.danger:hover{ background:#c94636; }
+
+  select option{ background: var(--navy-900); }
+
+  .evidence-link{
+    color: var(--brass); text-decoration:none; font-size:12px; border-bottom:1px dotted var(--brass-dim);
+  }
+  .evidence-link:hover{ color:#dcb432; }
+
+  .row-actions{ display:flex; gap:8px; }
+  .icon-btn{
+    all:unset; cursor:pointer; color: var(--steel-600); font-size:12px; padding:4px 8px;
+    border-radius:3px; border:1px solid var(--navy-700);
+  }
+  .icon-btn:hover{ color: var(--red); border-color: var(--red-dim); }
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background: var(--navy-800);
+    border:1px solid var(--brass-dim); color: var(--paper); padding:12px 18px;
+    border-radius:6px; font-size:13px; transform: translateY(20px); opacity:0;
+    transition: all .25s ease; pointer-events:none; z-index:50;
+  }
+  .toast.show{ transform: translateY(0); opacity:1; }
+
+  @media(max-width: 900px){
+    .app{ flex-direction:column; }
+    .sidebar{ width:100%; flex-direction:row; overflow-x:auto; padding:14px; }
+    .brand{ display:none; }
+    nav{ flex-direction:row; padding:0; }
+    .sidebar-footer{ display:none; }
+    main{ padding: 22px 18px; }
+    .grid-cards{ grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="badge-num">DIV. 7 — CASO ABIERTO</div>
+      <h1>Asuntos Internos</h1>
+      <div class="sub">Panel de control</div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="panel"><span class="n">01</span> Panel general</button>
+      <button class="nav-btn" data-view="agentes"><span class="n">02</span> Agentes</button>
+      <button class="nav-btn" data-view="bitacoras"><span class="n">03</span> Bitácoras</button>
+      <button class="nav-btn" data-view="sanciones"><span class="n">04</span> Sanciones</button>
+    </nav>
+    <div class="sidebar-footer">
+      DATOS COMPARTIDOS<br>
+      Visibles para todo el equipo con acceso a este panel.
+    </div>
+  </aside>
+
+  <main>
+
+    <!-- PANEL GENERAL -->
+    <section class="view active" id="view-panel">
+      <header class="top">
+        <h2>Panel general</h2>
+        <div class="stamp">ACTUALIZADO<br><span id="fecha-actual"></span></div>
+      </header>
+
+      <div class="grid-cards">
+        <div class="card">
+          <div class="label">Agentes registrados</div>
+          <div class="value" id="stat-agentes">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Bitácoras totales</div>
+          <div class="value" id="stat-bitacoras">0</div>
+        </div>
+        <div class="card alert">
+          <div class="label">Sanciones activas</div>
+          <div class="value" id="stat-sanciones">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Promedio bitácoras/agente</div>
+          <div class="value" id="stat-promedio">0</div>
+        </div>
+      </div>
+
+      <div class="section-title">Últimas bitácoras registradas</div>
+      <div id="panel-ultimas-bitacoras"></div>
+
+      <div class="section-title">Sanciones recientes</div>
+      <div id="panel-ultimas-sanciones"></div>
+    </section>
+
+    <!-- AGENTES -->
+    <section class="view" id="view-agentes">
+      <header class="top">
+        <h2>Agentes</h2>
+        <div class="stamp">EXPEDIENTES<br>DEL SERVIDOR</div>
+      </header>
+
+      <div class="panel">
+        <h3>Registrar nuevo agente</h3>
+        <div class="form-grid">
+          <div class="field"><label>Nombre / Rol</label><input id="ag-nombre" placeholder="Ej. Ofc. J. Ramírez"></div>
+          <div class="field"><label>Usuario de Discord</label><input id="ag-discord" placeholder="Ej. ramirez#0421"></div>
+          <div class="field"><label>Rango</label><input id="ag-rango" placeholder="Ej. Patrullero"></div>
+          <div class="field"><button class="btn" onclick="addAgente()">Registrar</button></div>
+        </div>
+      </div>
+
+      <div id="tabla-agentes"></div>
+    </section>
+
+    <!-- BITACORAS -->
+    <section class="view" id="view-bitacoras">
+      <header class="top">
+        <h2>Bitácoras</h2>
+        <div class="stamp">REGISTRO DE<br>MARCAJE</div>
+      </header>
+
+      <div class="panel">
+        <h3>Registrar bitácora / marcaje</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>Agente</label>
+            <select id="bi-agente"></select>
+          </div>
+          <div class="field"><label>Fecha</label><input id="bi-fecha" type="date"></div>
+          <div class="field" style="grid-column: span 2;"><label>Descripción del turno</label><input id="bi-desc" placeholder="Ej. Patrullaje zona norte, 2h de servicio"></div>
+          <div class="field"><button class="btn" onclick="addBitacora()">Registrar</button></div>
+        </div>
+      </div>
+
+      <div id="tabla-bitacoras"></div>
+    </section>
+
+    <!-- SANCIONES -->
+    <section class="view" id="view-sanciones">
+      <header class="top">
+        <h2>Sanciones</h2>
+        <div class="stamp">EXPEDIENTES<br>DISCIPLINARIOS</div>
+      </header>
+
+      <div class="panel">
+        <h3>Aplicar sanción</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>Agente</label>
+            <select id="sa-agente"></select>
+          </div>
+          <div class="field">
+            <label>Gravedad</label>
+            <select id="sa-gravedad">
+              <option value="leve">Leve</option>
+              <option value="grave">Grave</option>
+              <option value="baja">Baja del cuerpo</option>
+            </select>
+          </div>
+          <div class="field"><label>Fecha</label><input id="sa-fecha" type="date"></div>
+          <div class="field"><label>Enlace de evidencia (imagen, clip, mensaje)</label><input id="sa-evidencia" placeholder="https://..."></div>
+          <div class="field" style="grid-column: span 2;"><label>Motivo</label><textarea id="sa-motivo" placeholder="Describe la falta cometida"></textarea></div>
+          <div class="field"><button class="btn danger" onclick="addSancion()">Aplicar sanción</button></div>
+        </div>
+      </div>
+
+      <div id="tabla-sanciones"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let agentes = [];
+let bitacoras = [];
+let sanciones = [];
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ---------- STORAGE ----------
+async function loadAll(){
+  try{
+    const a = await window.storage.get('ai-agentes', true);
+    agentes = a ? JSON.parse(a.value) : [];
+  }catch(e){ agentes = []; }
+  try{
+    const b = await window.storage.get('ai-bitacoras', true);
+    bitacoras = b ? JSON.parse(b.value) : [];
+  }catch(e){ bitacoras = []; }
+  try{
+    const s = await window.storage.get('ai-sanciones', true);
+    sanciones = s ? JSON.parse(s.value) : [];
+  }catch(e){ sanciones = []; }
+  renderAll();
+}
+async function saveAgentes(){
+  try{ await window.storage.set('ai-agentes', JSON.stringify(agentes), true); }
+  catch(e){ showToast('Error guardando agentes'); }
+}
+async function saveBitacoras(){
+  try{ await window.storage.set('ai-bitacoras', JSON.stringify(bitacoras), true); }
+  catch(e){ showToast('Error guardando bitácoras'); }
+}
+async function saveSanciones(){
+  try{ await window.storage.set('ai-sanciones', JSON.stringify(sanciones), true); }
+  catch(e){ showToast('Error guardando sanciones'); }
+}
+
+// ---------- ACTIONS ----------
+async function addAgente(){
+  const nombre = document.getElementById('ag-nombre').value.trim();
+  const discord = document.getElementById('ag-discord').value.trim();
+  const rango = document.getElementById('ag-rango').value.trim();
+  if(!nombre){ showToast('Escribe un nombre'); return; }
+  agentes.push({ id: uid(), nombre, discord, rango, estado:'activo' });
+  document.getElementById('ag-nombre').value='';
+  document.getElementById('ag-discord').value='';
+  document.getElementById('ag-rango').value='';
+  await saveAgentes();
+  renderAll();
+  showToast('Agente registrado');
+}
+
+async function toggleEstadoAgente(id){
+  const ag = agentes.find(a=>a.id===id);
+  if(!ag) return;
+  ag.estado = ag.estado === 'activo' ? 'sancionado' : 'activo';
+  await saveAgentes();
+  renderAll();
+}
+
+async function eliminarAgente(id){
+  agentes = agentes.filter(a=>a.id!==id);
+  await saveAgentes();
+  renderAll();
+}
+
+async function addBitacora(){
+  const agenteId = document.getElementById('bi-agente').value;
+  const fecha = document.getElementById('bi-fecha').value;
+  const desc = document.getElementById('bi-desc').value.trim();
+  if(!agenteId){ showToast('Selecciona un agente'); return; }
+  if(!fecha){ showToast('Selecciona una fecha'); return; }
+  bitacoras.unshift({ id: uid(), agenteId, fecha, desc });
+  document.getElementById('bi-desc').value='';
+  await saveBitacoras();
+  renderAll();
+  showToast('Bitácora registrada');
+}
+
+async function eliminarBitacora(id){
+  bitacoras = bitacoras.filter(b=>b.id!==id);
+  await saveBitacoras();
+  renderAll();
+}
+
+async function addSancion(){
+  const agenteId = document.getElementById('sa-agente').value;
+  const gravedad = document.getElementById('sa-gravedad').value;
+  const fecha = document.getElementById('sa-fecha').value;
+  const evidencia = document.getElementById('sa-evidencia').value.trim();
+  const motivo = document.getElementById('sa-motivo').value.trim();
+  if(!agenteId){ showToast('Selecciona un agente'); return; }
+  if(!motivo){ showToast('Describe el motivo'); return; }
+  sanciones.unshift({ id: uid(), agenteId, gravedad, fecha, evidencia, motivo });
+  document.getElementById('sa-motivo').value='';
+  document.getElementById('sa-evidencia').value='';
+  await saveSanciones();
+  renderAll();
+  showToast('Sanción aplicada');
+}
+
+async function eliminarSancion(id){
+  sanciones = sanciones.filter(s=>s.id!==id);
+  await saveSanciones();
+  renderAll();
+}
+
+// ---------- RENDER ----------
+function nombreAgente(id){
+  const a = agentes.find(a=>a.id===id);
+  return a ? a.nombre : '(agente eliminado)';
+}
+function countBitacoras(agenteId){
+  return bitacoras.filter(b=>b.agenteId===agenteId).length;
+}
+function countSancionesActivas(agenteId){
+  return sanciones.filter(s=>s.agenteId===agenteId).length;
+}
+
+function renderSelects(){
+  const opts = agentes.map(a=>`<option value="${a.id}">${a.nombre}${a.rango? ' — '+a.rango:''}</option>`).join('');
+  document.getElementById('bi-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+  document.getElementById('sa-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+}
+
+function renderAgentesTabla(){
+  const el = document.getElementById('tabla-agentes');
+  if(!agentes.length){ el.innerHTML = '<div class="empty">No hay agentes registrados todavía.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Agente</th><th>Discord</th><th>Rango</th><th>Bitácoras</th><th>Sanciones</th><th>Estado</th><th></th>
+  </tr></thead><tbody>
+  ${agentes.map(a=>`
+    <tr>
+      <td>${a.nombre}</td>
+      <td class="mono">${a.discord||'—'}</td>
+      <td>${a.rango||'—'}</td>
+      <td><span class="tally">${countBitacoras(a.id)}</span></td>
+      <td><span class="tally">${countSancionesActivas(a.id)}</span></td>
+      <td><span class="pill ${a.estado==='activo'?'activo':'sancionado'}" style="cursor:pointer" onclick="toggleEstadoAgente('${a.id}')">${a.estado}</span></td>
+      <td class="row-actions"><button class="icon-btn" onclick="eliminarAgente('${a.id}')">Eliminar</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderBitacorasTabla(){
+  const el = document.getElementById('tabla-bitacoras');
+  if(!bitacoras.length){ el.innerHTML = '<div class="empty">No hay bitácoras registradas todavía.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Fecha</th><th>Agente</th><th>Descripción</th><th></th>
+  </tr></thead><tbody>
+  ${bitacoras.map(b=>`
+    <tr>
+      <td class="mono">${fmtDate(b.fecha)}</td>
+      <td>${nombreAgente(b.agenteId)}</td>
+      <td>${b.desc||'—'}</td>
+      <td class="row-actions"><button class="icon-btn" onclick="eliminarBitacora('${b.id}')">Eliminar</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderSancionesTabla(){
+  const el = document.getElementById('tabla-sanciones');
+  if(!sanciones.length){ el.innerHTML = '<div class="empty">No hay sanciones registradas todavía.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Fecha</th><th>Agente</th><th>Gravedad</th><th>Motivo</th><th>Evidencia</th><th></th>
+  </tr></thead><tbody>
+  ${sanciones.map(s=>`
+    <tr>
+      <td class="mono">${fmtDate(s.fecha)}</td>
+      <td>${nombreAgente(s.agenteId)}</td>
+      <td><span class="pill ${s.gravedad}">${s.gravedad}</span></td>
+      <td>${s.motivo}</td>
+      <td>${s.evidencia ? `<a class="evidence-link" href="${s.evidencia}" target="_blank" rel="noopener">Ver evidencia →</a>` : '—'}</td>
+      <td class="row-actions"><button class="icon-btn" onclick="eliminarSancion('${s.id}')">Eliminar</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderPanel(){
+  document.getElementById('stat-agentes').textContent = agentes.length;
+  document.getElementById('stat-bitacoras').textContent = bitacoras.length;
+  document.getElementById('stat-sanciones').textContent = sanciones.length;
+  document.getElementById('stat-promedio').textContent = agentes.length ? (bitacoras.length/agentes.length).toFixed(1) : '0';
+
+  const ultimasB = bitacoras.slice(0,5);
+  document.getElementById('panel-ultimas-bitacoras').innerHTML = ultimasB.length ?
+    `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Descripción</th></tr></thead><tbody>
+    ${ultimasB.map(b=>`<tr><td class="mono">${fmtDate(b.fecha)}</td><td>${nombreAgente(b.agenteId)}</td><td>${b.desc||'—'}</td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Sin bitácoras aún.</div>';
+
+  const ultimasS = sanciones.slice(0,5);
+  document.getElementById('panel-ultimas-sanciones').innerHTML = ultimasS.length ?
+    `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Gravedad</th><th>Motivo</th></tr></thead><tbody>
+    ${ultimasS.map(s=>`<tr><td class="mono">${fmtDate(s.fecha)}</td><td>${nombreAgente(s.agenteId)}</td><td><span class="pill ${s.gravedad}">${s.gravedad}</span></td><td>${s.motivo}</td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Sin sanciones aún.</div>';
+}
+
+function renderAll(){
+  renderSelects();
+  renderAgentesTabla();
+  renderBitacorasTabla();
+  renderSancionesTabla();
+  renderPanel();
+}
+
+// ---------- NAV ----------
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
+document.getElementById('bi-fecha').valueAsDate = new Date();
+document.getElementById('sa-fecha').valueAsDate = new Date();
+
+loadAll();
+</script>
+</body>
+</html>
