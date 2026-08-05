@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Asuntos Internos · Panel de Control</title>
+<title>DAI Rebelión · Panel de Control</title>
 <style>
   :root{
     --navy-950:#0b1016;
@@ -25,13 +26,19 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
     background:
-      radial-gradient(ellipse at top left, rgba(201,162,39,0.06), transparent 45%),
+      linear-gradient(rgba(233,228,216,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(233,228,216,0.025) 1px, transparent 1px),
+      radial-gradient(ellipse at top left, rgba(201,162,39,0.09), transparent 45%),
+      radial-gradient(ellipse at bottom right, rgba(179,57,44,0.07), transparent 55%),
+      radial-gradient(ellipse at center, rgba(9,13,19,0) 40%, rgba(0,0,0,0.35) 100%),
       var(--navy-950);
+    background-size: 42px 42px, 42px 42px, auto, auto, auto, auto;
+    background-attachment: fixed;
     color: var(--paper);
     font-family: var(--font-body);
     min-height:100vh;
   }
-  .app{ display:flex; min-height:100vh; }
+  .app{ display:flex; min-height:100vh; position:relative; }
 
   /* Sidebar */
   .sidebar{
@@ -157,6 +164,10 @@
   .pill.leve{ background:rgba(201,162,39,0.15); color:var(--brass); border:1px solid rgba(201,162,39,0.4); }
   .pill.grave{ background:rgba(179,57,44,0.18); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
   .pill.baja{ background:rgba(179,57,44,0.3); color:#ffb3a4; border:1px solid var(--red); }
+  .pill.regular{ background: rgba(58,74,90,0.25); color:var(--paper-dim); border:1px solid var(--steel-600); }
+  .pill.entrenamiento{ background: rgba(79,122,82,0.15); color:#8fbf92; border:1px solid rgba(79,122,82,0.4); }
+  .pill.mision{ background: rgba(201,162,39,0.15); color:var(--brass); border:1px solid rgba(201,162,39,0.4); }
+  .pill.operativo{ background: rgba(179,57,44,0.18); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
 
   .empty{
     padding: 40px 20px; text-align:center; color: var(--steel-600);
@@ -235,14 +246,15 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="badge-num">DIV. 7 — CASO ABIERTO</div>
-      <h1>Asuntos Internos</h1>
-      <div class="sub">Panel de control</div>
+      <h1>DAI Rebelión</h1>
+      <div class="sub">Asuntos Internos · Panel</div>
     </div>
     <nav>
       <button class="nav-btn active" data-view="panel"><span class="n">01</span> Panel general</button>
       <button class="nav-btn" data-view="agentes"><span class="n">02</span> Agentes</button>
       <button class="nav-btn" data-view="bitacoras"><span class="n">03</span> Bitácoras</button>
       <button class="nav-btn" data-view="sanciones"><span class="n">04</span> Sanciones</button>
+      <button class="nav-btn" data-view="bonos"><span class="n">05</span> Bonos</button>
     </nav>
     <div class="sidebar-footer">
       DATOS COMPARTIDOS<br>
@@ -295,8 +307,10 @@
       <div class="panel">
         <h3>Registrar nuevo agente</h3>
         <div class="form-grid">
-          <div class="field"><label>Nombre / Rol</label><input id="ag-nombre" placeholder="Ej. Ofc. J. Ramírez"></div>
-          <div class="field"><label>Usuario de Discord</label><input id="ag-discord" placeholder="Ej. ramirez#0421"></div>
+          <div class="field"><label>Nro. Placa</label><input id="ag-placa" placeholder="Ej. 0135"></div>
+          <div class="field"><label>Nombre IC</label><input id="ag-nombre" placeholder="Ej. J. Ramírez"></div>
+          <div class="field"><label>Nombre OOC</label><input id="ag-nombreooc" placeholder="Ej. ramirez_ooc"></div>
+          <div class="field"><label>Usuario de Discord</label><input id="ag-discord" placeholder="Ej. 123456789012345678"></div>
           <div class="field">
             <label>Rango</label>
             <select id="ag-rango">
@@ -344,6 +358,20 @@
         </div>
       </div>
 
+      <div class="panel">
+        <h3>Importar agentes desde Excel</h3>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 3;">
+            <label>Archivo (.xlsx, .xls o .csv)</label>
+            <input type="file" id="import-file" accept=".xlsx,.xls,.csv">
+          </div>
+          <div class="field"><button class="btn secondary" onclick="importarExcel()">Importar</button></div>
+        </div>
+        <div style="margin-top:10px; font-size:11.5px; color:var(--paper-dim); line-height:1.5;">
+          El archivo debe tener columnas llamadas <strong>NRO PLACA</strong>, <strong>NOMBRE IC</strong>, <strong>JERARQUÍA</strong>, <strong>NOMBRE OOC</strong> y <strong>DISCORD</strong> (no importa el orden). Los agentes con la misma placa se actualizan en vez de duplicarse. Las filas sin nombre se ignoran.
+        </div>
+      </div>
+
       <div id="tabla-agentes"></div>
     </section>
 
@@ -361,8 +389,17 @@
             <label>Agente</label>
             <select id="bi-agente"></select>
           </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select id="bi-tipo">
+              <option value="Servicio regular">Servicio regular</option>
+              <option value="Entrenamiento">Entrenamiento</option>
+              <option value="Misión">Misión</option>
+              <option value="Operativo Especial">Operativo Especial</option>
+            </select>
+          </div>
           <div class="field"><label>Fecha</label><input id="bi-fecha" type="date"></div>
-          <div class="field" style="grid-column: span 2;"><label>Descripción del turno</label><input id="bi-desc" placeholder="Ej. Patrullaje zona norte, 2h de servicio"></div>
+          <div class="field" style="grid-column: span 3;"><label>Descripción del turno</label><input id="bi-desc" placeholder="Ej. Patrullaje zona norte, 2h de servicio"></div>
           <div class="field"><button class="btn" onclick="addBitacora()">Registrar</button></div>
         </div>
       </div>
@@ -402,11 +439,54 @@
       <div id="tabla-sanciones"></div>
     </section>
 
+    <!-- BONOS -->
+    <section class="view" id="view-bonos">
+      <header class="top">
+        <h2>Bonos</h2>
+        <div class="stamp">PAGOS AL<br>PERSONAL</div>
+      </header>
+
+      <div class="grid-cards" style="grid-template-columns: repeat(2, 1fr); margin-bottom:24px;">
+        <div class="card">
+          <div class="label">Bonos pagados</div>
+          <div class="value" id="stat-bonos-cantidad">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Total pagado</div>
+          <div class="value" id="stat-bonos-total">$0</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Registrar pago de bono</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>Agente</label>
+            <select id="bo-agente"></select>
+          </div>
+          <div class="field">
+            <label>Periodicidad</label>
+            <select id="bo-periodicidad">
+              <option value="Semanal">Semanal</option>
+              <option value="Mensual">Mensual</option>
+            </select>
+          </div>
+          <div class="field"><label>Periodo</label><input id="bo-periodo" placeholder="Ej. Semana 32 / Agosto 2026"></div>
+          <div class="field"><label>Monto</label><input id="bo-monto" type="number" min="0" step="0.01" placeholder="Ej. 50"></div>
+          <div class="field"><label>Fecha de pago</label><input id="bo-fecha" type="date"></div>
+          <div class="field"><button class="btn" onclick="addBono()">Registrar pago</button></div>
+        </div>
+      </div>
+
+      <div id="tabla-bonos"></div>
+    </section>
+
   </main>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -424,6 +504,7 @@ const db = firebase.firestore();
 let agentes = [];
 let bitacoras = [];
 let sanciones = [];
+let bonos = [];
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function showToast(msg){
@@ -453,20 +534,85 @@ function initListeners(){
     sanciones = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('bonos').onSnapshot(snap=>{
+    bonos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderAll();
+  }, ()=>showToast('Error de conexión con la base de datos'));
 }
 
 // ---------- ACTIONS ----------
 async function addAgente(){
+  const placa = document.getElementById('ag-placa').value.trim();
   const nombre = document.getElementById('ag-nombre').value.trim();
+  const nombreOOC = document.getElementById('ag-nombreooc').value.trim();
   const discord = document.getElementById('ag-discord').value.trim();
   const rango = document.getElementById('ag-rango').value;
   if(!nombre){ showToast('Escribe un nombre'); return; }
   try{
-    await db.collection('agentes').doc(uid()).set({ nombre, discord, rango, estado:'activo', creado: Date.now() });
+    const id = placa ? ('placa-'+placa) : uid();
+    await db.collection('agentes').doc(id).set({ placa, nombre, nombreOOC, discord, rango, estado:'activo', creado: Date.now() }, { merge:true });
+    document.getElementById('ag-placa').value='';
     document.getElementById('ag-nombre').value='';
+    document.getElementById('ag-nombreooc').value='';
     document.getElementById('ag-discord').value='';
     showToast('Agente registrado');
   }catch(e){ showToast('Error al guardar el agente'); }
+}
+
+function valorColumna(fila, nombresPosibles){
+  for(const clave of Object.keys(fila)){
+    const claveNorm = clave.trim().toUpperCase();
+    if(nombresPosibles.includes(claveNorm)){
+      const v = fila[clave];
+      return v === undefined || v === null ? '' : String(v).trim();
+    }
+  }
+  return '';
+}
+
+async function importarExcel(){
+  const fileInput = document.getElementById('import-file');
+  const file = fileInput.files[0];
+  if(!file){ showToast('Selecciona un archivo'); return; }
+  try{
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type:'array' });
+    const hoja = wb.Sheets[wb.SheetNames[0]];
+    const filas = XLSX.utils.sheet_to_json(hoja, { defval:'' });
+
+    let importados = 0;
+    let batch = db.batch();
+    let opsEnBatch = 0;
+
+    for(const fila of filas){
+      const nombre = valorColumna(fila, ['NOMBRE IC']);
+      if(!nombre) continue;
+      const placa = valorColumna(fila, ['NRO PLACA','PLACA','NRO. PLACA']);
+      const rango = valorColumna(fila, ['JERARQUÍA','JERARQUIA']);
+      const nombreOOC = valorColumna(fila, ['NOMBRE OOC']);
+      const discord = valorColumna(fila, ['DISCORD']);
+      const id = placa ? ('placa-'+placa) : uid();
+      batch.set(db.collection('agentes').doc(id), {
+        placa, nombre, rango, nombreOOC, discord,
+        estado: 'activo', creado: Date.now()
+      }, { merge: true });
+      importados++;
+      opsEnBatch++;
+      if(opsEnBatch >= 450){
+        await batch.commit();
+        batch = db.batch();
+        opsEnBatch = 0;
+      }
+    }
+    if(opsEnBatch > 0) await batch.commit();
+
+    fileInput.value = '';
+    showToast(importados ? `${importados} agentes importados` : 'No se encontraron filas válidas');
+  }catch(e){
+    console.error(e);
+    showToast('Error al leer el archivo');
+  }
 }
 
 async function toggleEstadoAgente(id){
@@ -484,12 +630,13 @@ async function eliminarAgente(id){
 
 async function addBitacora(){
   const agenteId = document.getElementById('bi-agente').value;
+  const tipo = document.getElementById('bi-tipo').value;
   const fecha = document.getElementById('bi-fecha').value;
   const desc = document.getElementById('bi-desc').value.trim();
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!fecha){ showToast('Selecciona una fecha'); return; }
   try{
-    await db.collection('bitacoras').doc(uid()).set({ agenteId, fecha, desc, creado: Date.now() });
+    await db.collection('bitacoras').doc(uid()).set({ agenteId, tipo, fecha, desc, creado: Date.now() });
     document.getElementById('bi-desc').value='';
     showToast('Bitácora registrada');
   }catch(e){ showToast('Error al guardar la bitácora'); }
@@ -497,6 +644,27 @@ async function addBitacora(){
 
 async function eliminarBitacora(id){
   try{ await db.collection('bitacoras').doc(id).delete(); }
+  catch(e){ showToast('Error al eliminar'); }
+}
+
+async function addBono(){
+  const agenteId = document.getElementById('bo-agente').value;
+  const periodicidad = document.getElementById('bo-periodicidad').value;
+  const periodo = document.getElementById('bo-periodo').value.trim();
+  const monto = parseFloat(document.getElementById('bo-monto').value) || 0;
+  const fecha = document.getElementById('bo-fecha').value;
+  if(!agenteId){ showToast('Selecciona un agente'); return; }
+  if(!periodo){ showToast('Escribe el periodo'); return; }
+  try{
+    await db.collection('bonos').doc(uid()).set({ agenteId, periodicidad, periodo, monto, fecha, creado: Date.now() });
+    document.getElementById('bo-periodo').value='';
+    document.getElementById('bo-monto').value='';
+    showToast('Pago de bono registrado');
+  }catch(e){ showToast('Error al guardar el bono'); }
+}
+
+async function eliminarBono(id){
+  try{ await db.collection('bonos').doc(id).delete(); }
   catch(e){ showToast('Error al eliminar'); }
 }
 
@@ -534,20 +702,25 @@ function countSancionesActivas(agenteId){
 }
 
 function renderSelects(){
-  const opts = agentes.map(a=>`<option value="${a.id}">${a.nombre}${a.rango? ' — '+a.rango:''}</option>`).join('');
+  const ordenados = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
+  const opts = ordenados.map(a=>`<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre}${a.rango? ' — '+a.rango:''}</option>`).join('');
   document.getElementById('bi-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
   document.getElementById('sa-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+  document.getElementById('bo-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
 }
 
 function renderAgentesTabla(){
   const el = document.getElementById('tabla-agentes');
   if(!agentes.length){ el.innerHTML = '<div class="empty">No hay agentes registrados todavía.</div>'; return; }
+  const ordenados = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
   el.innerHTML = `<table><thead><tr>
-    <th>Agente</th><th>Discord</th><th>Rango</th><th>Bitácoras</th><th>Sanciones</th><th>Estado</th><th></th>
+    <th>Placa</th><th>Nombre IC</th><th>Nombre OOC</th><th>Discord</th><th>Rango</th><th>Bitácoras</th><th>Sanciones</th><th>Estado</th><th></th>
   </tr></thead><tbody>
-  ${agentes.map(a=>`
+  ${ordenados.map(a=>`
     <tr>
+      <td class="mono">${a.placa||'—'}</td>
       <td>${a.nombre}</td>
+      <td>${a.nombreOOC||'—'}</td>
       <td class="mono">${a.discord||'—'}</td>
       <td>${a.rango||'—'}</td>
       <td><span class="tally">${countBitacoras(a.id)}</span></td>
@@ -558,16 +731,24 @@ function renderAgentesTabla(){
   </tbody></table>`;
 }
 
+function claseTipoBitacora(tipo){
+  if(tipo==='Entrenamiento') return 'entrenamiento';
+  if(tipo==='Misión') return 'mision';
+  if(tipo==='Operativo Especial') return 'operativo';
+  return 'regular';
+}
+
 function renderBitacorasTabla(){
   const el = document.getElementById('tabla-bitacoras');
   if(!bitacoras.length){ el.innerHTML = '<div class="empty">No hay bitácoras registradas todavía.</div>'; return; }
   el.innerHTML = `<table><thead><tr>
-    <th>Fecha</th><th>Agente</th><th>Descripción</th><th></th>
+    <th>Fecha</th><th>Agente</th><th>Tipo</th><th>Descripción</th><th></th>
   </tr></thead><tbody>
   ${bitacoras.map(b=>`
     <tr>
       <td class="mono">${fmtDate(b.fecha)}</td>
       <td>${nombreAgente(b.agenteId)}</td>
+      <td><span class="pill ${claseTipoBitacora(b.tipo)}">${b.tipo||'Servicio regular'}</span></td>
       <td>${b.desc||'—'}</td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarBitacora('${b.id}')">Eliminar</button></td>
     </tr>`).join('')}
@@ -611,11 +792,34 @@ function renderPanel(){
     </tbody></table>` : '<div class="empty">Sin sanciones aún.</div>';
 }
 
+function renderBonosTabla(){
+  const el = document.getElementById('tabla-bonos');
+  document.getElementById('stat-bonos-cantidad').textContent = bonos.length;
+  const total = bonos.reduce((acc,b)=> acc + (Number(b.monto)||0), 0);
+  document.getElementById('stat-bonos-total').textContent = '$' + total.toLocaleString('es-ES', { maximumFractionDigits:2 });
+
+  if(!bonos.length){ el.innerHTML = '<div class="empty">No hay bonos registrados todavía.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Fecha de pago</th><th>Agente</th><th>Periodicidad</th><th>Periodo</th><th>Monto</th><th></th>
+  </tr></thead><tbody>
+  ${bonos.map(b=>`
+    <tr>
+      <td class="mono">${fmtDate(b.fecha)}</td>
+      <td>${nombreAgente(b.agenteId)}</td>
+      <td>${b.periodicidad||'—'}</td>
+      <td>${b.periodo||'—'}</td>
+      <td class="mono">$${(Number(b.monto)||0).toLocaleString('es-ES', { maximumFractionDigits:2 })}</td>
+      <td class="row-actions"><button class="icon-btn" onclick="eliminarBono('${b.id}')">Eliminar</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
 function renderAll(){
   renderSelects();
   renderAgentesTabla();
   renderBitacorasTabla();
   renderSancionesTabla();
+  renderBonosTabla();
   renderPanel();
 }
 
@@ -632,6 +836,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
 document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
+document.getElementById('bo-fecha').valueAsDate = new Date();
 
 initListeners();
 </script>
