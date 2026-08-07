@@ -372,6 +372,13 @@
         </div>
       </div>
 
+      <div class="section-title">Buscar agente</div>
+      <div class="form-grid" style="margin-bottom:16px;">
+        <div class="field" style="grid-column: span 2;">
+          <input id="buscar-agente" placeholder="Buscar por placa o nombre..." oninput="renderAgentesTabla()">
+        </div>
+      </div>
+
       <div id="tabla-agentes"></div>
     </section>
 
@@ -466,15 +473,22 @@
           </div>
           <div class="field">
             <label>Periodicidad</label>
-            <select id="bo-periodicidad">
+            <select id="bo-periodicidad" onchange="actualizarTipoPeriodo()">
               <option value="Semanal">Semanal</option>
               <option value="Mensual">Mensual</option>
             </select>
           </div>
-          <div class="field"><label>Periodo</label><input id="bo-periodo" placeholder="Ej. Semana 32 / Agosto 2026"></div>
+          <div class="field"><label>Periodo</label><input id="bo-periodo" type="week"></div>
           <div class="field"><label>Monto</label><input id="bo-monto" type="number" min="0" step="0.01" placeholder="Ej. 50"></div>
           <div class="field"><label>Fecha de pago</label><input id="bo-fecha" type="date"></div>
           <div class="field"><button class="btn" onclick="addBono()">Registrar pago</button></div>
+        </div>
+      </div>
+
+      <div class="section-title">Buscar pago</div>
+      <div class="form-grid" style="margin-bottom:16px;">
+        <div class="field" style="grid-column: span 2;">
+          <input id="buscar-bono" placeholder="Buscar por placa, agente o periodo..." oninput="renderBonosTabla()">
         </div>
       </div>
 
@@ -516,6 +530,28 @@ function fmtDate(d){
   if(!d) return '—';
   const [y,m,day] = d.split('-');
   return `${day}/${m}/${y}`;
+}
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function fmtPeriodo(periodicidad, valor){
+  if(!valor) return '—';
+  if(periodicidad === 'Semanal' && valor.includes('-W')){
+    const [anio, semana] = valor.split('-W');
+    return `Semana ${parseInt(semana,10)} · ${anio}`;
+  }
+  if(periodicidad === 'Mensual' && valor.includes('-')){
+    const [anio, mes] = valor.split('-');
+    return `${MESES[parseInt(mes,10)-1]} ${anio}`;
+  }
+  return valor;
+}
+
+function actualizarTipoPeriodo(){
+  const periodicidad = document.getElementById('bo-periodicidad').value;
+  const input = document.getElementById('bo-periodo');
+  input.type = periodicidad === 'Semanal' ? 'week' : 'month';
+  input.value = '';
 }
 
 // ---------- STORAGE (Firestore, en tiempo real) ----------
@@ -712,7 +748,17 @@ function renderSelects(){
 function renderAgentesTabla(){
   const el = document.getElementById('tabla-agentes');
   if(!agentes.length){ el.innerHTML = '<div class="empty">No hay agentes registrados todavía.</div>'; return; }
-  const ordenados = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
+  const filtro = (document.getElementById('buscar-agente')?.value || '').trim().toLowerCase();
+  let lista = [...agentes];
+  if(filtro){
+    lista = lista.filter(a =>
+      (a.placa||'').toLowerCase().includes(filtro) ||
+      (a.nombre||'').toLowerCase().includes(filtro) ||
+      (a.nombreOOC||'').toLowerCase().includes(filtro)
+    );
+  }
+  const ordenados = lista.sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
+  if(!ordenados.length){ el.innerHTML = '<div class="empty">Ningún agente coincide con la búsqueda.</div>'; return; }
   el.innerHTML = `<table><thead><tr>
     <th>Placa</th><th>Nombre IC</th><th>Nombre OOC</th><th>Discord</th><th>Rango</th><th>Bitácoras</th><th>Sanciones</th><th>Estado</th><th></th>
   </tr></thead><tbody>
@@ -799,15 +845,29 @@ function renderBonosTabla(){
   document.getElementById('stat-bonos-total').textContent = '$' + total.toLocaleString('es-ES', { maximumFractionDigits:2 });
 
   if(!bonos.length){ el.innerHTML = '<div class="empty">No hay bonos registrados todavía.</div>'; return; }
+
+  const filtro = (document.getElementById('buscar-bono')?.value || '').trim().toLowerCase();
+  let lista = bonos;
+  if(filtro){
+    lista = bonos.filter(b=>{
+      const ag = agentes.find(a=>a.id===b.agenteId);
+      const placa = (ag?.placa||'').toLowerCase();
+      const nombre = (ag?.nombre||'').toLowerCase();
+      const periodoTexto = fmtPeriodo(b.periodicidad, b.periodo).toLowerCase();
+      return placa.includes(filtro) || nombre.includes(filtro) || periodoTexto.includes(filtro);
+    });
+  }
+  if(!lista.length){ el.innerHTML = '<div class="empty">Ningún pago coincide con la búsqueda.</div>'; return; }
+
   el.innerHTML = `<table><thead><tr>
     <th>Fecha de pago</th><th>Agente</th><th>Periodicidad</th><th>Periodo</th><th>Monto</th><th></th>
   </tr></thead><tbody>
-  ${bonos.map(b=>`
+  ${lista.map(b=>`
     <tr>
       <td class="mono">${fmtDate(b.fecha)}</td>
       <td>${nombreAgente(b.agenteId)}</td>
       <td>${b.periodicidad||'—'}</td>
-      <td>${b.periodo||'—'}</td>
+      <td>${fmtPeriodo(b.periodicidad, b.periodo)}</td>
       <td class="mono">$${(Number(b.monto)||0).toLocaleString('es-ES', { maximumFractionDigits:2 })}</td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarBono('${b.id}')">Eliminar</button></td>
     </tr>`).join('')}
@@ -837,6 +897,7 @@ document.getElementById('fecha-actual').textContent = new Date().toLocaleDateStr
 document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
 document.getElementById('bo-fecha').valueAsDate = new Date();
+actualizarTipoPeriodo();
 
 initListeners();
 </script>
