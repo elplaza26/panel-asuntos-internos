@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 1. Obtener access_token del usuario
     const params = new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID,
       client_secret: process.env.DISCORD_CLIENT_SECRET,
@@ -25,13 +26,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No se pudo validar el código con Discord', detalle: tokenData });
     }
 
+    // 2. Obtener datos del usuario
     const userRes = await fetch('https://discord.com/api/v10/users/@me', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const user = await userRes.json();
 
+    // 3. Consultar datos del miembro en el servidor con el Bot Token
     const guildId = process.env.DISCORD_GUILD_ID;
     const botToken = process.env.DISCORD_BOT_TOKEN;
+    const TARGET_ROLE_ID = "1521954294017036340";
 
     const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${user.id}`, {
       headers: { Authorization: `Bot ${botToken}` },
@@ -40,7 +44,7 @@ export default async function handler(req, res) {
     if (!memberRes.ok) {
       const errorText = await memberRes.text();
       return res.status(403).json({ 
-        error: `Error al leer tu miembro en el servidor (Status ${memberRes.status})`, 
+        error: `El bot no pudo consultar al usuario en el servidor (Status: ${memberRes.status})`, 
         detalle: errorText 
       });
     }
@@ -48,9 +52,25 @@ export default async function handler(req, res) {
     const memberData = await memberRes.json();
     const userRoles = memberData.roles || [];
 
-    // MUESTRA TUS ROLES EN LA PANTALLA ROJA
-    return res.status(403).json({ 
-      error: `Tus roles detectados por el bot son: [${userRoles.join(', ')}] | Tu ID de usuario es: ${user.id}` 
+    // 4. Verificar si tiene el rol
+    const hasRole = userRoles.includes(TARGET_ROLE_ID);
+
+    if (!hasRole) {
+      return res.status(403).json({ 
+        error: `Tu cuenta no tiene el rol autorizado. Roles detectados: [${userRoles.join(', ')}]` 
+      });
+    }
+
+    // 5. Retornar sesión autorizada
+    return res.status(200).json({
+      id: user.id,
+      username: user.username,
+      global_name: user.global_name || user.username,
+      avatar: user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+        : null,
+      roles: userRoles,
+      authorized: true
     });
 
   } catch (e) {
