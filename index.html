@@ -241,7 +241,16 @@
 </style>
 </head>
 <body>
-<div class="app">
+
+<div id="login-gate" style="min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; text-align:center; padding:24px;">
+  <div class="badge-num" style="font-family:var(--font-mono); color:var(--brass); font-size:11px; letter-spacing:2px;">DIV. 7 — ACCESO RESTRINGIDO</div>
+  <h1 style="font-family:var(--font-display); font-size:32px;">DAI Rebelión</h1>
+  <p style="color:var(--paper-dim); font-size:13.5px; max-width:340px;">Inicia sesión con tu cuenta de Discord para acceder al panel de Asuntos Internos.</p>
+  <button class="btn" onclick="iniciarLoginDiscord()" style="padding:12px 26px;">Iniciar sesión con Discord</button>
+  <div id="login-error" style="color:#e08678; font-size:12px; display:none;"></div>
+</div>
+
+<div class="app" id="app-content" style="display:none;">
 
   <aside class="sidebar">
     <div class="brand">
@@ -257,8 +266,9 @@
       <button class="nav-btn" data-view="bonos"><span class="n">05</span> Bonos</button>
     </nav>
     <div class="sidebar-footer">
-      DATOS COMPARTIDOS<br>
-      Visibles para todo el equipo con acceso a este panel.
+      <div id="usuario-actual" style="color:var(--paper); font-size:12.5px; margin-bottom:8px; display:flex; align-items:center;"></div>
+      <a href="#" onclick="cerrarSesion(); return false;" style="color:var(--brass-dim); font-size:11px; text-decoration:none;">Cerrar sesión</a>
+      <div style="margin-top:10px;">DATOS COMPARTIDOS<br>Visibles para todo el equipo con acceso a este panel.</div>
     </div>
   </aside>
 
@@ -289,6 +299,20 @@
           <div class="value" id="stat-promedio">0</div>
         </div>
       </div>
+
+      <div class="section-title">
+        Agentes inactivos
+        <span style="display:flex; align-items:center; gap:6px; flex:none; text-transform:none; letter-spacing:0;">
+          sin bitácora hace más de
+          <input id="umbral-inactivos" type="number" min="1" value="7" oninput="renderInactivos()"
+            style="width:52px; background:var(--navy-950); border:1px solid var(--navy-700); color:var(--paper); padding:4px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px;">
+          días
+        </span>
+      </div>
+      <div id="panel-inactivos"></div>
+
+      <div class="section-title">Actividad reciente</div>
+      <div id="panel-actividad"></div>
 
       <div class="section-title">Últimas bitácoras registradas</div>
       <div id="panel-ultimas-bitacoras"></div>
@@ -515,6 +539,87 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ---------- AUTENTICACIÓN CON DISCORD ----------
+const DISCORD_CLIENT_ID = '1535661121724227604';
+const REDIRECT_URI = 'https://panel-asuntos-internos.vercel.app/';
+let usuarioActual = null;
+let auditoria = [];
+
+function iniciarLoginDiscord(){
+  const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
+  window.location.href = url;
+}
+
+function cerrarSesion(){
+  localStorage.removeItem('daiUsuario');
+  usuarioActual = null;
+  window.location.href = REDIRECT_URI;
+}
+
+async function initAuth(){
+  const guardado = localStorage.getItem('daiUsuario');
+  if(guardado){
+    usuarioActual = JSON.parse(guardado);
+    mostrarApp();
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if(code){
+    try{
+      const resp = await fetch('/api/discord-callback?code=' + encodeURIComponent(code));
+      const data = await resp.json();
+      if(data.id){
+        usuarioActual = data;
+        localStorage.setItem('daiUsuario', JSON.stringify(data));
+        window.history.replaceState({}, document.title, REDIRECT_URI);
+        mostrarApp();
+        return;
+      }else{
+        mostrarErrorLogin('No se pudo verificar la sesión con Discord. Intenta de nuevo.');
+      }
+    }catch(e){
+      mostrarErrorLogin('Error al conectar con el servidor de login.');
+    }
+  }
+
+  mostrarLogin();
+}
+
+function mostrarApp(){
+  document.getElementById('login-gate').style.display = 'none';
+  document.getElementById('app-content').style.display = 'flex';
+  const badge = document.getElementById('usuario-actual');
+  if(badge && usuarioActual){
+    badge.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
+  }
+  initListeners();
+}
+
+function mostrarLogin(){
+  document.getElementById('login-gate').style.display = 'flex';
+  document.getElementById('app-content').style.display = 'none';
+}
+
+function mostrarErrorLogin(msg){
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  mostrarLogin();
+}
+
+async function registrarAuditoria(accion){
+  try{
+    await db.collection('auditoria').doc(uid()).set({
+      accion,
+      usuario: usuarioActual?.global_name || 'Desconocido',
+      usuarioId: usuarioActual?.id || null,
+      creado: Date.now()
+    });
+  }catch(e){ /* no interrumpe la acción principal si falla el registro */ }
+}
+
 let agentes = [];
 let bitacoras = [];
 let sanciones = [];
@@ -530,6 +635,12 @@ function fmtDate(d){
   if(!d) return '—';
   const [y,m,day] = d.split('-');
   return `${day}/${m}/${y}`;
+}
+
+function fmtHora(timestamp){
+  if(!timestamp) return '—';
+  const d = new Date(timestamp);
+  return d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
 }
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -575,6 +686,11 @@ function initListeners(){
     bonos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('auditoria').onSnapshot(snap=>{
+    auditoria = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderPanel();
+  }, ()=>{});
 }
 
 // ---------- ACTIONS ----------
@@ -588,6 +704,7 @@ async function addAgente(){
   try{
     const id = placa ? ('placa-'+placa) : uid();
     await db.collection('agentes').doc(id).set({ placa, nombre, nombreOOC, discord, rango, estado:'activo', creado: Date.now() }, { merge:true });
+    registrarAuditoria(`Registró al agente ${nombre}${placa? ' (#'+placa+')':''}`);
     document.getElementById('ag-placa').value='';
     document.getElementById('ag-nombre').value='';
     document.getElementById('ag-nombreooc').value='';
@@ -596,15 +713,10 @@ async function addAgente(){
   }catch(e){ showToast('Error al guardar el agente'); }
 }
 
-function valorColumna(fila, nombresPosibles){
-  for(const clave of Object.keys(fila)){
-    const claveNorm = clave.trim().toUpperCase();
-    if(nombresPosibles.includes(claveNorm)){
-      const v = fila[clave];
-      return v === undefined || v === null ? '' : String(v).trim();
-    }
-  }
-  return '';
+function normalizarTexto(s){
+  return String(s==null ? '' : s)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .trim().toUpperCase().replace(/\s+/g,' ');
 }
 
 async function importarExcel(){
@@ -615,20 +727,49 @@ async function importarExcel(){
     const buffer = await file.arrayBuffer();
     const wb = XLSX.read(buffer, { type:'array' });
     const hoja = wb.Sheets[wb.SheetNames[0]];
-    const filas = XLSX.utils.sheet_to_json(hoja, { defval:'' });
+    const filasCrudas = XLSX.utils.sheet_to_json(hoja, { header:1, defval:'' });
+
+    // Buscar la fila real de encabezados (puede no ser la primera si hay títulos o filas decorativas antes)
+    let idxEncabezado = -1;
+    for(let i=0; i<Math.min(filasCrudas.length, 20); i++){
+      const fila = (filasCrudas[i]||[]).map(normalizarTexto);
+      if(fila.some(c => c.includes('NOMBRE IC'))){ idxEncabezado = i; break; }
+    }
+    if(idxEncabezado === -1){
+      showToast('No se encontró la columna "NOMBRE IC" en el archivo');
+      return;
+    }
+
+    const encabezados = filasCrudas[idxEncabezado].map(normalizarTexto);
+    const filasDatos = filasCrudas.slice(idxEncabezado+1);
+
+    function col(nombresPosibles, fila){
+      for(let i=0;i<encabezados.length;i++){
+        if(nombresPosibles.includes(encabezados[i])){
+          const v = fila[i];
+          return v===undefined||v===null ? '' : String(v).trim();
+        }
+      }
+      return '';
+    }
 
     let importados = 0;
+    let sinPlaca = 0;
     let batch = db.batch();
     let opsEnBatch = 0;
 
-    for(const fila of filas){
-      const nombre = valorColumna(fila, ['NOMBRE IC']);
+    for(const fila of filasDatos){
+      const nombre = col(['NOMBRE IC'], fila);
       if(!nombre) continue;
-      const placa = valorColumna(fila, ['NRO PLACA','PLACA','NRO. PLACA']);
-      const rango = valorColumna(fila, ['JERARQUÍA','JERARQUIA']);
-      const nombreOOC = valorColumna(fila, ['NOMBRE OOC']);
-      const discord = valorColumna(fila, ['DISCORD']);
-      const id = placa ? ('placa-'+placa) : uid();
+      const placa = col(['NRO PLACA','PLACA','NRO. PLACA','N PLACA','NUMERO PLACA'], fila);
+      const rango = col(['JERARQUIA'], fila);
+      const nombreOOC = col(['NOMBRE OOC'], fila);
+      const discord = col(['DISCORD'], fila);
+
+      if(!placa) sinPlaca++;
+      // Si no hay placa, usamos el nombre normalizado como ID para que reimportar no duplique
+      const id = placa ? ('placa-'+placa) : ('nombre-'+normalizarTexto(nombre).replace(/\s+/g,'-'));
+
       batch.set(db.collection('agentes').doc(id), {
         placa, nombre, rango, nombreOOC, discord,
         estado: 'activo', creado: Date.now()
@@ -644,7 +785,13 @@ async function importarExcel(){
     if(opsEnBatch > 0) await batch.commit();
 
     fileInput.value = '';
-    showToast(importados ? `${importados} agentes importados` : 'No se encontraron filas válidas');
+    if(importados === 0){
+      showToast('No se encontraron filas válidas');
+    }else if(sinPlaca > 0){
+      showToast(`${importados} agentes importados (${sinPlaca} sin placa detectada)`);
+    }else{
+      showToast(`${importados} agentes importados correctamente`);
+    }
   }catch(e){
     console.error(e);
     showToast('Error al leer el archivo');
@@ -655,12 +802,19 @@ async function toggleEstadoAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
   const nuevoEstado = ag.estado === 'activo' ? 'sancionado' : 'activo';
-  try{ await db.collection('agentes').doc(id).update({ estado: nuevoEstado }); }
+  try{
+    await db.collection('agentes').doc(id).update({ estado: nuevoEstado });
+    registrarAuditoria(`Cambió el estado de ${ag.nombre} a "${nuevoEstado}"`);
+  }
   catch(e){ showToast('Error al actualizar'); }
 }
 
 async function eliminarAgente(id){
-  try{ await db.collection('agentes').doc(id).delete(); }
+  const nombre = nombreAgente(id);
+  try{
+    await db.collection('agentes').doc(id).delete();
+    registrarAuditoria(`Eliminó al agente ${nombre}`);
+  }
   catch(e){ showToast('Error al eliminar'); }
 }
 
@@ -673,13 +827,18 @@ async function addBitacora(){
   if(!fecha){ showToast('Selecciona una fecha'); return; }
   try{
     await db.collection('bitacoras').doc(uid()).set({ agenteId, tipo, fecha, desc, creado: Date.now() });
+    registrarAuditoria(`Registró una bitácora (${tipo}) a ${nombreAgente(agenteId)}`);
     document.getElementById('bi-desc').value='';
     showToast('Bitácora registrada');
   }catch(e){ showToast('Error al guardar la bitácora'); }
 }
 
 async function eliminarBitacora(id){
-  try{ await db.collection('bitacoras').doc(id).delete(); }
+  const b = bitacoras.find(x=>x.id===id);
+  try{
+    await db.collection('bitacoras').doc(id).delete();
+    if(b) registrarAuditoria(`Eliminó una bitácora de ${nombreAgente(b.agenteId)}`);
+  }
   catch(e){ showToast('Error al eliminar'); }
 }
 
@@ -693,6 +852,7 @@ async function addBono(){
   if(!periodo){ showToast('Escribe el periodo'); return; }
   try{
     await db.collection('bonos').doc(uid()).set({ agenteId, periodicidad, periodo, monto, fecha, creado: Date.now() });
+    registrarAuditoria(`Registró un bono de $${monto} a ${nombreAgente(agenteId)}`);
     document.getElementById('bo-periodo').value='';
     document.getElementById('bo-monto').value='';
     showToast('Pago de bono registrado');
@@ -700,7 +860,11 @@ async function addBono(){
 }
 
 async function eliminarBono(id){
-  try{ await db.collection('bonos').doc(id).delete(); }
+  const b = bonos.find(x=>x.id===id);
+  try{
+    await db.collection('bonos').doc(id).delete();
+    if(b) registrarAuditoria(`Eliminó un pago de bono de ${nombreAgente(b.agenteId)}`);
+  }
   catch(e){ showToast('Error al eliminar'); }
 }
 
@@ -714,6 +878,7 @@ async function addSancion(){
   if(!motivo){ showToast('Describe el motivo'); return; }
   try{
     await db.collection('sanciones').doc(uid()).set({ agenteId, gravedad, fecha, evidencia, motivo, creado: Date.now() });
+    registrarAuditoria(`Aplicó una sanción (${gravedad}) a ${nombreAgente(agenteId)}`);
     document.getElementById('sa-motivo').value='';
     document.getElementById('sa-evidencia').value='';
     showToast('Sanción aplicada');
@@ -721,7 +886,11 @@ async function addSancion(){
 }
 
 async function eliminarSancion(id){
-  try{ await db.collection('sanciones').doc(id).delete(); }
+  const s = sanciones.find(x=>x.id===id);
+  try{
+    await db.collection('sanciones').doc(id).delete();
+    if(s) registrarAuditoria(`Eliminó una sanción de ${nombreAgente(s.agenteId)}`);
+  }
   catch(e){ showToast('Error al eliminar'); }
 }
 
@@ -825,6 +994,14 @@ function renderPanel(){
   document.getElementById('stat-sanciones').textContent = sanciones.length;
   document.getElementById('stat-promedio').textContent = agentes.length ? (bitacoras.length/agentes.length).toFixed(1) : '0';
 
+  renderInactivos();
+
+  const actividad = auditoria.slice(0,8);
+  document.getElementById('panel-actividad').innerHTML = actividad.length ?
+    `<table><thead><tr><th>Hora</th><th>Usuario</th><th>Acción</th></tr></thead><tbody>
+    ${actividad.map(a=>`<tr><td class="mono">${fmtHora(a.creado)}</td><td>${a.usuario||'—'}</td><td>${a.accion||'—'}</td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Sin actividad registrada todavía.</div>';
+
   const ultimasB = bitacoras.slice(0,5);
   document.getElementById('panel-ultimas-bitacoras').innerHTML = ultimasB.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Descripción</th></tr></thead><tbody>
@@ -836,6 +1013,53 @@ function renderPanel(){
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Gravedad</th><th>Motivo</th></tr></thead><tbody>
     ${ultimasS.map(s=>`<tr><td class="mono">${fmtDate(s.fecha)}</td><td>${nombreAgente(s.agenteId)}</td><td><span class="pill ${s.gravedad}">${s.gravedad}</span></td><td>${s.motivo}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin sanciones aún.</div>';
+}
+
+function renderInactivos(){
+  const el = document.getElementById('panel-inactivos');
+  if(!el) return;
+  if(!agentes.length){ el.innerHTML = '<div class="empty">Registra agentes para ver esta alerta.</div>'; return; }
+
+  const umbral = parseInt(document.getElementById('umbral-inactivos')?.value, 10) || 7;
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+
+  const activos = agentes.filter(a => a.estado === 'activo');
+
+  const conDatos = activos.map(a=>{
+    const propias = bitacoras.filter(b=>b.agenteId===a.id && b.fecha)
+      .sort((x,y)=> y.fecha.localeCompare(x.fecha));
+    const ultima = propias[0]?.fecha || null;
+    let dias = null;
+    if(ultima){
+      const [y,m,d] = ultima.split('-').map(Number);
+      const fechaUltima = new Date(y, m-1, d);
+      dias = Math.floor((hoy - fechaUltima) / 86400000);
+    }
+    return { agente:a, ultima, dias };
+  });
+
+  const inactivos = conDatos
+    .filter(x => x.dias === null || x.dias >= umbral)
+    .sort((x,y)=> (y.dias ?? 999999) - (x.dias ?? 999999));
+
+  if(!inactivos.length){
+    el.innerHTML = '<div class="empty">Ningún agente activo supera ese umbral. Todo al día.</div>';
+    return;
+  }
+
+  el.innerHTML = `<table><thead><tr>
+    <th>Placa</th><th>Agente</th><th>Rango</th><th>Última bitácora</th><th>Días inactivo</th>
+  </tr></thead><tbody>
+  ${inactivos.map(x=>`
+    <tr>
+      <td class="mono">${x.agente.placa||'—'}</td>
+      <td>${x.agente.nombre}</td>
+      <td>${x.agente.rango||'—'}</td>
+      <td class="mono">${x.ultima? fmtDate(x.ultima) : 'Nunca'}</td>
+      <td><span class="pill ${x.dias===null || x.dias>=14 ? 'baja' : 'leve'}">${x.dias===null ? 'Sin registro' : x.dias+' días'}</span></td>
+    </tr>`).join('')}
+  </tbody></table>`;
 }
 
 function renderBonosTabla(){
@@ -899,7 +1123,7 @@ document.getElementById('sa-fecha').valueAsDate = new Date();
 document.getElementById('bo-fecha').valueAsDate = new Date();
 actualizarTipoPeriodo();
 
-initListeners();
+initAuth();
 </script>
 </body>
 </html>
