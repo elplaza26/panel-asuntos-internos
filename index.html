@@ -570,12 +570,14 @@ async function initAuth(){
     try{
       const resp = await fetch('/api/discord-callback?code=' + encodeURIComponent(code));
       const data = await resp.json();
-      if(data.id){
+      if(data.id && data.autorizado){
         usuarioActual = data;
         localStorage.setItem('daiUsuario', JSON.stringify(data));
         window.history.replaceState({}, document.title, REDIRECT_URI);
         mostrarApp();
         return;
+      }else if(data.id && !data.autorizado){
+        mostrarErrorLogin('Tu cuenta de Discord no tiene el rol autorizado para entrar a este panel.');
       }else{
         mostrarErrorLogin('No se pudo verificar la sesión con Discord. Intenta de nuevo.');
       }
@@ -743,9 +745,9 @@ async function importarExcel(){
     const encabezados = filasCrudas[idxEncabezado].map(normalizarTexto);
     const filasDatos = filasCrudas.slice(idxEncabezado+1);
 
-    function col(nombresPosibles, fila){
+    function col(palabraClave, fila){
       for(let i=0;i<encabezados.length;i++){
-        if(nombresPosibles.includes(encabezados[i])){
+        if(encabezados[i] && encabezados[i].includes(palabraClave)){
           const v = fila[i];
           return v===undefined||v===null ? '' : String(v).trim();
         }
@@ -759,12 +761,12 @@ async function importarExcel(){
     let opsEnBatch = 0;
 
     for(const fila of filasDatos){
-      const nombre = col(['NOMBRE IC'], fila);
+      const nombre = col('NOMBRE IC', fila);
       if(!nombre) continue;
-      const placa = col(['NRO PLACA','PLACA','NRO. PLACA','N PLACA','NUMERO PLACA'], fila);
-      const rango = col(['JERARQUIA'], fila);
-      const nombreOOC = col(['NOMBRE OOC'], fila);
-      const discord = col(['DISCORD'], fila);
+      const placa = col('PLACA', fila);
+      const rango = col('JERARQUIA', fila);
+      const nombreOOC = col('OOC', fila);
+      const discord = col('DISCORD', fila);
 
       if(!placa) sinPlaca++;
       // Si no hay placa, usamos el nombre normalizado como ID para que reimportar no duplique
