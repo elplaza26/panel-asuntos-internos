@@ -26,19 +26,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No se pudo validar el código con Discord', detalle: tokenData });
     }
 
-    // 2. Obtener datos básicos del usuario
+    // 2. Obtener datos del usuario
     const userRes = await fetch('https://discord.com/api/v10/users/@me', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const user = await userRes.json();
 
-    // 3. Consultar los roles del usuario en el servidor usando el BOT TOKEN
+    // 3. Consultar datos del miembro en el servidor con el Bot Token
     const guildId = process.env.DISCORD_GUILD_ID;
     const botToken = process.env.DISCORD_BOT_TOKEN;
-    
-    // Obtiene la lista de IDs de roles permitidos desde las variables
-    const rawRoles = process.env.DISCORD_ALLOWED_ROLE_IDS || process.env.DISCORD_ROLE_IDS || '';
-    const allowedRoleIds = rawRoles.split(',').map(r => r.trim());
+    const DAI_ROLE_ID = "1521954294017036340"; // ID fija del rol DAI
 
     const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${user.id}`, {
       headers: { Authorization: `Bot ${botToken}` },
@@ -49,16 +46,16 @@ export default async function handler(req, res) {
     }
 
     const memberData = await memberRes.json();
-    const userRoles = memberData.roles || []; // Array con los IDs de roles del usuario
+    const userRoles = memberData.roles || [];
 
-    // 4. Verificar si el usuario tiene al menos uno de los roles autorizados
-    const hasAllowedRole = userRoles.some(roleId => allowedRoleIds.includes(roleId));
+    // 4. Comprobar si el usuario posee el rol de DAI
+    const hasDaiRole = userRoles.includes(DAI_ROLE_ID);
 
-    if (!hasAllowedRole) {
+    if (!hasDaiRole) {
       return res.status(403).json({ error: 'Tu cuenta de Discord no tiene el rol autorizado para entrar a este panel.' });
     }
 
-    // 5. Devolver datos del usuario junto con la confirmación del rol
+    // 5. Retornar éxito
     return res.status(200).json({
       id: user.id,
       username: user.username,
