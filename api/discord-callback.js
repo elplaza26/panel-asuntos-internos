@@ -32,7 +32,6 @@ export default async function handler(req, res) {
 
     const guildId = process.env.DISCORD_GUILD_ID;
     const botToken = process.env.DISCORD_BOT_TOKEN;
-    const DAI_ROLE_ID = "1521954294017036340";
 
     const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${user.id}`, {
       headers: { Authorization: `Bot ${botToken}` },
@@ -41,7 +40,7 @@ export default async function handler(req, res) {
     if (!memberRes.ok) {
       const errorText = await memberRes.text();
       return res.status(403).json({ 
-        error: `El bot no pudo leer tus datos en el servidor (Status: ${memberRes.status})`, 
+        error: `Error al leer tu miembro en el servidor (Status ${memberRes.status})`, 
         detalle: errorText 
       });
     }
@@ -49,23 +48,9 @@ export default async function handler(req, res) {
     const memberData = await memberRes.json();
     const userRoles = memberData.roles || [];
 
-    const hasDaiRole = userRoles.includes(DAI_ROLE_ID);
-
-    if (!hasDaiRole) {
-      return res.status(403).json({ 
-        error: `Tu cuenta de Discord no tiene el rol autorizado. Roles detectados: ${userRoles.join(', ')}` 
-      });
-    }
-
-    return res.status(200).json({
-      id: user.id,
-      username: user.username,
-      global_name: user.global_name || user.username,
-      avatar: user.avatar
-        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-        : null,
-      roles: userRoles,
-      authorized: true
+    // MUESTRA TUS ROLES EN LA PANTALLA ROJA
+    return res.status(403).json({ 
+      error: `Tus roles detectados por el bot son: [${userRoles.join(', ')}] | Tu ID de usuario es: ${user.id}` 
     });
 
   } catch (e) {
