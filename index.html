@@ -280,6 +280,17 @@
         <div class="stamp">ACTUALIZADO<br><span id="fecha-actual"></span></div>
       </header>
 
+      <div class="form-grid" style="margin-bottom:20px;">
+        <div class="field">
+          <label>Filtrar por sub-división</label>
+          <select id="filtro-subdivision" onchange="renderPanel()"><option value="">Todas las sub-divisiones</option></select>
+        </div>
+        <div class="field">
+          <label>Filtrar por departamento</label>
+          <select id="filtro-departamento" onchange="renderPanel()"><option value="">Todos los departamentos</option></select>
+        </div>
+      </div>
+
       <div class="grid-cards">
         <div class="card">
           <div class="label">Agentes registrados</div>
@@ -299,11 +310,14 @@
         </div>
       </div>
 
+      <div class="section-title">Actividad de bitácoras · últimas 8 semanas</div>
+      <div id="panel-grafica" style="margin-bottom:24px;"></div>
+
       <div class="section-title">
         Agentes inactivos
         <span style="display:flex; align-items:center; gap:6px; flex:none; text-transform:none; letter-spacing:0;">
           sin bitácora hace más de
-          <input id="umbral-inactivos" type="number" min="1" value="7" oninput="renderInactivos()"
+          <input id="umbral-inactivos" type="number" min="1" value="7" oninput="renderPanel()"
             style="width:52px; background:var(--navy-950); border:1px solid var(--navy-700); color:var(--paper); padding:4px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px;">
           días
         </span>
@@ -377,6 +391,8 @@
               </optgroup>
             </select>
           </div>
+          <div class="field"><label>Sub-división</label><input id="ag-subdivision" placeholder="Ej. DAI"></div>
+          <div class="field"><label>Departamento</label><input id="ag-departamento" placeholder="Ej. DIRECTIVA"></div>
           <div class="field"><button class="btn" onclick="addAgente()">Registrar</button></div>
         </div>
       </div>
@@ -403,6 +419,9 @@
       </div>
 
       <div id="tabla-agentes"></div>
+
+      <div class="section-title">Historial de cambios de rango</div>
+      <div id="tabla-historial-rangos"></div>
     </section>
 
     <!-- BITACORAS -->
@@ -617,7 +636,7 @@ async function initAuth(){
       }else if(data.id && !data.autorizado){
         mostrarErrorLogin(data.debugInfo || 'Tu cuenta de Discord no tiene el rol autorizado para entrar a este panel.');
       }else{
-        mostrarErrorLogin(data.error || 'No se pudo verificar la sesión con Discord. Intenta de nuevo.');
+        mostrarErrorLogin((data.error || 'No se pudo verificar la sesión con Discord.') + (data.detalle ? ' — ' + JSON.stringify(data.detalle) : ''));
       }
     }catch(e){
       mostrarErrorLogin('Error al conectar con el servidor de login.');
@@ -674,6 +693,7 @@ let agentes = [];
 let bitacoras = [];
 let sanciones = [];
 let bonos = [];
+let historialRangos = [];
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function showToast(msg){
@@ -741,6 +761,11 @@ function initListeners(){
     auditoria = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderPanel();
   }, ()=>{});
+
+  db.collection('historialRangos').onSnapshot(snap=>{
+    historialRangos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderHistorialRangos();
+  }, ()=>{});
 }
 
 // ---------- ACTIONS ----------
@@ -750,17 +775,35 @@ async function addAgente(){
   const nombreOOC = document.getElementById('ag-nombreooc').value.trim();
   const discord = document.getElementById('ag-discord').value.trim();
   const rango = document.getElementById('ag-rango').value;
+  const subdivision = document.getElementById('ag-subdivision').value.trim();
+  const departamento = document.getElementById('ag-departamento').value.trim();
   if(!nombre){ showToast('Escribe un nombre'); return; }
   try{
     const id = placa ? ('placa-'+placa) : uid();
-    await db.collection('agentes').doc(id).set({ placa, nombre, nombreOOC, discord, rango, estado:'activo', creado: Date.now() }, { merge:true });
+    const anterior = agentes.find(a=>a.id===id);
+    await db.collection('agentes').doc(id).set({ placa, nombre, nombreOOC, discord, rango, subdivision, departamento, estado:'activo', creado: Date.now() }, { merge:true });
+    if(anterior && anterior.rango && anterior.rango !== rango){
+      await registrarCambioRango(id, nombre, anterior.rango, rango);
+    }
     registrarAuditoria(`Registró al agente ${nombre}${placa? ' (#'+placa+')':''}`);
     document.getElementById('ag-placa').value='';
     document.getElementById('ag-nombre').value='';
     document.getElementById('ag-nombreooc').value='';
     document.getElementById('ag-discord').value='';
+    document.getElementById('ag-subdivision').value='';
+    document.getElementById('ag-departamento').value='';
     showToast('Agente registrado');
   }catch(e){ showToast('Error al guardar el agente'); }
+}
+
+async function registrarCambioRango(agenteId, agenteNombre, rangoAnterior, rangoNuevo){
+  try{
+    await db.collection('historialRangos').doc(uid()).set({
+      agenteId, agenteNombre, rangoAnterior, rangoNuevo,
+      usuario: usuarioActual?.global_name || 'Desconocido',
+      creado: Date.now()
+    });
+  }catch(e){ /* no interrumpe el flujo principal */ }
 }
 
 function normalizarTexto(s){
@@ -807,6 +850,7 @@ async function importarExcel(){
     let sinPlaca = 0;
     let batch = db.batch();
     let opsEnBatch = 0;
+    let cambiosRango = 0;
 
     for(const fila of filasDatos){
       const nombre = col('NOMBRE IC', fila);
@@ -815,18 +859,32 @@ async function importarExcel(){
       const rango = col('JERARQUIA', fila);
       const nombreOOC = col('OOC', fila);
       const discord = col('DISCORD', fila);
+      const subdivision = col('DIVISION', fila);
+      const departamento = col('DEPARTAMENTO', fila);
 
       if(!placa) sinPlaca++;
       // Si no hay placa, usamos el nombre normalizado como ID para que reimportar no duplique
       const id = placa ? ('placa-'+placa) : ('nombre-'+normalizarTexto(nombre).replace(/\s+/g,'-'));
 
+      const anterior = agentes.find(a=>a.id===id);
+      if(anterior && anterior.rango && rango && anterior.rango !== rango){
+        batch.set(db.collection('historialRangos').doc(uid()), {
+          agenteId: id, agenteNombre: nombre,
+          rangoAnterior: anterior.rango, rangoNuevo: rango,
+          usuario: usuarioActual?.global_name || 'Desconocido',
+          creado: Date.now()
+        });
+        cambiosRango++;
+        opsEnBatch++;
+      }
+
       batch.set(db.collection('agentes').doc(id), {
-        placa, nombre, rango, nombreOOC, discord,
+        placa, nombre, rango, nombreOOC, discord, subdivision, departamento,
         estado: 'activo', creado: Date.now()
       }, { merge: true });
       importados++;
       opsEnBatch++;
-      if(opsEnBatch >= 450){
+      if(opsEnBatch >= 400){
         await batch.commit();
         batch = db.batch();
         opsEnBatch = 0;
@@ -840,7 +898,7 @@ async function importarExcel(){
     }else if(sinPlaca > 0){
       showToast(`${importados} agentes importados (${sinPlaca} sin placa detectada)`);
     }else{
-      showToast(`${importados} agentes importados correctamente`);
+      showToast(`${importados} agentes importados correctamente${cambiosRango? ' · '+cambiosRango+' cambios de rango detectados':''}`);
     }
   }catch(e){
     console.error(e);
@@ -979,7 +1037,7 @@ function renderAgentesTabla(){
   const ordenados = lista.sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
   if(!ordenados.length){ el.innerHTML = '<div class="empty">Ningún agente coincide con la búsqueda.</div>'; return; }
   el.innerHTML = `<table><thead><tr>
-    <th>Placa</th><th>Nombre IC</th><th>Nombre OOC</th><th>Discord</th><th>Rango</th><th>Bitácoras</th><th>Sanciones</th><th>Estado</th><th></th>
+    <th>Placa</th><th>Nombre IC</th><th>Nombre OOC</th><th>Discord</th><th>Rango</th><th>Bitácoras</th><th>Sanciones</th><th>Estado</th><th>Nota</th><th></th>
   </tr></thead><tbody>
   ${ordenados.map(a=>`
     <tr>
@@ -987,11 +1045,53 @@ function renderAgentesTabla(){
       <td>${a.nombre}</td>
       <td>${a.nombreOOC||'—'}</td>
       <td class="mono">${a.discord||'—'}</td>
-      <td>${a.rango||'—'}</td>
+      <td>${iconoRango(a.rango)} ${a.rango||'—'}</td>
       <td><span class="tally">${countBitacoras(a.id)}</span></td>
       <td><span class="tally">${countSancionesActivas(a.id)}</span></td>
       <td><span class="pill ${a.estado==='activo'?'activo':'sancionado'}" style="cursor:pointer" onclick="toggleEstadoAgente('${a.id}')">${a.estado}</span></td>
+      <td><button class="icon-btn" onclick="editarNota('${a.id}')" title="${a.notas? a.notas.replace(/"/g,'&quot;') : 'Sin notas'}">${a.notas? '📝' : '➕'}</button></td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarAgente('${a.id}')">Eliminar</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function iconoRango(rango){
+  const r = (rango||'').toUpperCase();
+  if(r.includes('DIRECTOR') || r.includes('JEFE DEPARTAMENTO') || r.includes('JEFE DAI') || r.includes('SUB JEFE') || r.includes('DEV.') || r.includes('STAFF')) return '⭐';
+  if(r.includes('COMISARIO') || r.includes('COMISIONADO')) return '🎖️';
+  if(r.includes('INSPECTOR')) return '🛡️';
+  if(r.includes('OFICIAL') || r.includes('AGENTE')) return '🔹';
+  if(r.includes('CADETE')) return '🔰';
+  if(r.includes('JUBILADO')) return '⚪';
+  return '•';
+}
+
+async function editarNota(id){
+  const ag = agentes.find(a=>a.id===id);
+  if(!ag) return;
+  const nueva = window.prompt(`Nota interna para ${ag.nombre} (solo la ve el DAI):`, ag.notas || '');
+  if(nueva === null) return; // canceló
+  try{
+    await db.collection('agentes').doc(id).update({ notas: nueva.trim() });
+    registrarAuditoria(`Actualizó la nota interna de ${ag.nombre}`);
+  }catch(e){ showToast('Error al guardar la nota'); }
+}
+
+function renderHistorialRangos(){
+  const el = document.getElementById('tabla-historial-rangos');
+  if(!el) return;
+  if(!historialRangos.length){ el.innerHTML = '<div class="empty">No hay cambios de rango registrados todavía.</div>'; return; }
+  const lista = historialRangos.slice(0,20);
+  el.innerHTML = `<table><thead><tr>
+    <th>Fecha</th><th>Agente</th><th>Rango anterior</th><th>Rango nuevo</th><th>Registrado por</th>
+  </tr></thead><tbody>
+  ${lista.map(h=>`
+    <tr>
+      <td class="mono">${fmtHora(h.creado)}</td>
+      <td>${h.agenteNombre||'—'}</td>
+      <td>${iconoRango(h.rangoAnterior)} ${h.rangoAnterior||'—'}</td>
+      <td>${iconoRango(h.rangoNuevo)} ${h.rangoNuevo||'—'}</td>
+      <td>${h.usuario||'—'}</td>
     </tr>`).join('')}
   </tbody></table>`;
 }
@@ -1038,13 +1138,93 @@ function renderSancionesTabla(){
   </tbody></table>`;
 }
 
-function renderPanel(){
-  document.getElementById('stat-agentes').textContent = agentes.length;
-  document.getElementById('stat-bitacoras').textContent = bitacoras.length;
-  document.getElementById('stat-sanciones').textContent = sanciones.length;
-  document.getElementById('stat-promedio').textContent = agentes.length ? (bitacoras.length/agentes.length).toFixed(1) : '0';
+function opcionesUnicas(campo){
+  const set = new Set(agentes.map(a=>a[campo]).filter(Boolean));
+  return [...set].sort();
+}
 
-  renderInactivos();
+function renderFiltrosPanel(){
+  const selSub = document.getElementById('filtro-subdivision');
+  const selDep = document.getElementById('filtro-departamento');
+  if(!selSub || !selDep) return;
+  const subActual = selSub.value;
+  const depActual = selDep.value;
+  selSub.innerHTML = '<option value="">Todas las sub-divisiones</option>' + opcionesUnicas('subdivision').map(v=>`<option value="${v}">${v}</option>`).join('');
+  selDep.innerHTML = '<option value="">Todos los departamentos</option>' + opcionesUnicas('departamento').map(v=>`<option value="${v}">${v}</option>`).join('');
+  selSub.value = subActual;
+  selDep.value = depActual;
+}
+
+function agentesFiltrados(){
+  const sub = document.getElementById('filtro-subdivision')?.value || '';
+  const dep = document.getElementById('filtro-departamento')?.value || '';
+  return agentes.filter(a => (!sub || a.subdivision===sub) && (!dep || a.departamento===dep));
+}
+
+function bitacorasFiltradas(){
+  const ids = new Set(agentesFiltrados().map(a=>a.id));
+  return bitacoras.filter(b=>ids.has(b.agenteId));
+}
+
+function sancionesFiltradas(){
+  const ids = new Set(agentesFiltrados().map(a=>a.id));
+  return sanciones.filter(s=>ids.has(s.agenteId));
+}
+
+function claveSemana(fechaStr){
+  const d = new Date(fechaStr+'T00:00:00');
+  const target = new Date(d.valueOf());
+  const dayNr = (d.getDay()+6)%7;
+  target.setDate(target.getDate()-dayNr+3);
+  const firstThursday = new Date(target.getFullYear(),0,4);
+  const diff = target - firstThursday;
+  const week = 1 + Math.round(diff/(7*24*3600*1000));
+  return `${target.getFullYear()}-S${String(week).padStart(2,'0')}`;
+}
+
+function renderGraficaBitacoras(lista){
+  const el = document.getElementById('panel-grafica');
+  if(!el) return;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const semanas = [];
+  for(let i=7;i>=0;i--){
+    const d = new Date(hoy);
+    d.setDate(d.getDate() - i*7);
+    semanas.push(claveSemana(d.toISOString().slice(0,10)));
+  }
+  const conteo = {};
+  semanas.forEach(s=>conteo[s]=0);
+  lista.forEach(b=>{
+    if(!b.fecha) return;
+    const k = claveSemana(b.fecha);
+    if(conteo.hasOwnProperty(k)) conteo[k]++;
+  });
+  const max = Math.max(1, ...semanas.map(s=>conteo[s]));
+  const barras = semanas.map(s=>{
+    const h = Math.round((conteo[s]/max)*90);
+    return `<div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;">
+      <div style="font-size:11px; color:var(--brass); font-family:var(--font-mono);">${conteo[s]}</div>
+      <div style="width:60%; height:${Math.max(h,3)}px; background:linear-gradient(180deg, var(--brass), var(--brass-dim)); border-radius:3px 3px 0 0;"></div>
+      <div style="font-size:9.5px; color:var(--paper-dim); font-family:var(--font-mono);">${s.split('-S')[1]}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div style="display:flex; align-items:flex-end; gap:8px; height:150px; padding:16px; background:var(--navy-900); border:1px solid var(--navy-700); border-radius:6px;">${barras}</div>
+  <div style="font-size:10.5px; color:var(--steel-600); margin-top:6px; text-align:right;">Número de semana del año</div>`;
+}
+
+function renderPanel(){
+  renderFiltrosPanel();
+  const agFilt = agentesFiltrados();
+  const biFilt = bitacorasFiltradas();
+  const saFilt = sancionesFiltradas();
+
+  document.getElementById('stat-agentes').textContent = agFilt.length;
+  document.getElementById('stat-bitacoras').textContent = biFilt.length;
+  document.getElementById('stat-sanciones').textContent = saFilt.length;
+  document.getElementById('stat-promedio').textContent = agFilt.length ? (biFilt.length/agFilt.length).toFixed(1) : '0';
+
+  renderGraficaBitacoras(biFilt);
+  renderInactivos(agFilt, biFilt);
 
   const actividad = auditoria.slice(0,8);
   document.getElementById('panel-actividad').innerHTML = actividad.length ?
@@ -1052,32 +1232,32 @@ function renderPanel(){
     ${actividad.map(a=>`<tr><td class="mono">${fmtHora(a.creado)}</td><td>${a.usuario||'—'}</td><td>${a.accion||'—'}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin actividad registrada todavía.</div>';
 
-  const ultimasB = bitacoras.slice(0,5);
+  const ultimasB = biFilt.slice(0,5);
   document.getElementById('panel-ultimas-bitacoras').innerHTML = ultimasB.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Descripción</th></tr></thead><tbody>
     ${ultimasB.map(b=>`<tr><td class="mono">${fmtDate(b.fecha)}</td><td>${nombreAgente(b.agenteId)}</td><td>${b.desc||'—'}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin bitácoras aún.</div>';
 
-  const ultimasS = sanciones.slice(0,5);
+  const ultimasS = saFilt.slice(0,5);
   document.getElementById('panel-ultimas-sanciones').innerHTML = ultimasS.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Gravedad</th><th>Motivo</th></tr></thead><tbody>
     ${ultimasS.map(s=>`<tr><td class="mono">${fmtDate(s.fecha)}</td><td>${nombreAgente(s.agenteId)}</td><td><span class="pill ${s.gravedad}">${s.gravedad}</span></td><td>${s.motivo}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin sanciones aún.</div>';
 }
 
-function renderInactivos(){
+function renderInactivos(agFilt, biFilt){
   const el = document.getElementById('panel-inactivos');
   if(!el) return;
-  if(!agentes.length){ el.innerHTML = '<div class="empty">Registra agentes para ver esta alerta.</div>'; return; }
+  if(!agFilt.length){ el.innerHTML = '<div class="empty">Ningún agente coincide con este filtro.</div>'; return; }
 
   const umbral = parseInt(document.getElementById('umbral-inactivos')?.value, 10) || 7;
   const hoy = new Date();
   hoy.setHours(0,0,0,0);
 
-  const activos = agentes.filter(a => a.estado === 'activo');
+  const activos = agFilt.filter(a => a.estado === 'activo');
 
   const conDatos = activos.map(a=>{
-    const propias = bitacoras.filter(b=>b.agenteId===a.id && b.fecha)
+    const propias = biFilt.filter(b=>b.agenteId===a.id && b.fecha)
       .sort((x,y)=> y.fecha.localeCompare(x.fecha));
     const ultima = propias[0]?.fecha || null;
     let dias = null;
@@ -1105,7 +1285,7 @@ function renderInactivos(){
     <tr>
       <td class="mono">${x.agente.placa||'—'}</td>
       <td>${x.agente.nombre}</td>
-      <td>${x.agente.rango||'—'}</td>
+      <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
       <td class="mono">${x.ultima? fmtDate(x.ultima) : 'Nunca'}</td>
       <td><span class="pill ${x.dias===null || x.dias>=14 ? 'baja' : 'leve'}">${x.dias===null ? 'Sin registro' : x.dias+' días'}</span></td>
     </tr>`).join('')}
