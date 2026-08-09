@@ -772,11 +772,6 @@ function mostrarApp(){
     if(badge){
       badge.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
     }
-    const esDirectiva = !!usuarioActual.esDirectiva;
-    const bloqueActividad = document.getElementById('bloque-actividad-reciente');
-    const panelRequisitos = document.getElementById('panel-requisitos-ascenso');
-    if(bloqueActividad) bloqueActividad.style.display = esDirectiva ? 'block' : 'none';
-    if(panelRequisitos) panelRequisitos.style.display = esDirectiva ? 'block' : 'none';
     initListeners();
   }else{
     document.getElementById('app-policia').style.display = 'flex';
@@ -1647,10 +1642,6 @@ function renderRequisitosForm(){
 }
 
 async function guardarRequisitos(){
-  if(!usuarioActual || !usuarioActual.esDirectiva){
-    showToast('Solo Directiva puede modificar los requisitos de ascenso');
-    return;
-  }
   const inputs = document.querySelectorAll('.req-rango-input');
   const dias = {};
   inputs.forEach(inp=>{
