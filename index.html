@@ -160,9 +160,18 @@
   }
   .pill.activo{ background: rgba(79,122,82,0.15); color:#8fbf92; border:1px solid rgba(79,122,82,0.4); }
   .pill.sancionado{ background: rgba(179,57,44,0.15); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
-  .pill.leve{ background:rgba(201,162,39,0.15); color:var(--brass); border:1px solid rgba(201,162,39,0.4); }
-  .pill.grave{ background:rgba(179,57,44,0.18); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
-  .pill.baja{ background:rgba(179,57,44,0.3); color:#ffb3a4; border:1px solid var(--red); }
+  .pill.leve{ background:rgba(74,144,201,0.16); color:#8ec4ec; border:1px solid rgba(74,144,201,0.45); }
+  .pill.grave{ background:rgba(214,138,44,0.2); color:#f0b169; border:1px solid rgba(214,138,44,0.5); }
+  .pill.baja{ background:rgba(179,57,44,0.32); color:#ff9d8a; border:1px solid var(--red); font-weight:700; }
+
+  /* Alto contraste */
+  body.alto-contraste{
+    --navy-950:#000000; --navy-900:#0a0a0a; --navy-800:#151515; --navy-700:#2e2e2e;
+    --paper:#ffffff; --paper-dim:#d8d8d8;
+  }
+  body.alto-contraste table tbody td{ font-size:14.5px; }
+  body.alto-contraste .card .value{ font-size:36px; }
+  body.alto-contraste .empty{ color:#e0e0e0; }
   .pill.regular{ background: rgba(58,74,90,0.25); color:var(--paper-dim); border:1px solid var(--steel-600); }
   .pill.entrenamiento{ background: rgba(79,122,82,0.15); color:#8fbf92; border:1px solid rgba(79,122,82,0.4); }
   .pill.mision{ background: rgba(201,162,39,0.15); color:var(--brass); border:1px solid rgba(201,162,39,0.4); }
@@ -242,6 +251,12 @@
 <body>
 
 <div id="login-gate" style="min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; text-align:center; padding:24px;">
+  <svg viewBox="0 0 48 48" style="width:56px; height:56px;">
+    <path d="M24 3 L42 10 V22 C42 34 34 42 24 45 C14 42 6 34 6 22 V10 Z" fill="none" stroke="var(--brass)" stroke-width="1.6"/>
+    <path d="M24 3 L42 10 V22 C42 34 34 42 24 45 C14 42 6 34 6 22 V10 Z" fill="var(--brass)" opacity="0.08"/>
+    <path d="M24 12 L30 15 V23 C30 29 27 33 24 35 C21 33 18 29 18 23 V15 Z" fill="none" stroke="var(--brass)" stroke-width="1.1"/>
+    <path d="M24 17 L24 29 M19 23 L29 23" stroke="var(--brass)" stroke-width="1.1"/>
+  </svg>
   <div class="badge-num" style="font-family:var(--font-mono); color:var(--brass); font-size:11px; letter-spacing:2px;">DIV. 7 — ACCESO RESTRINGIDO</div>
   <h1 style="font-family:var(--font-display); font-size:32px;">DAI Rebelión</h1>
   <p style="color:var(--paper-dim); font-size:13.5px; max-width:340px;">Inicia sesión con tu cuenta de Discord para acceder al panel de Asuntos Internos.</p>
@@ -253,9 +268,20 @@
 
   <aside class="sidebar">
     <div class="brand">
+      <svg viewBox="0 0 48 48" style="width:36px; height:36px; margin-bottom:8px;">
+        <path d="M24 3 L42 10 V22 C42 34 34 42 24 45 C14 42 6 34 6 22 V10 Z" fill="none" stroke="var(--brass)" stroke-width="2"/>
+        <path d="M24 3 L42 10 V22 C42 34 34 42 24 45 C14 42 6 34 6 22 V10 Z" fill="var(--brass)" opacity="0.08"/>
+        <path d="M24 12 L30 15 V23 C30 29 27 33 24 35 C21 33 18 29 18 23 V15 Z" fill="none" stroke="var(--brass)" stroke-width="1.3"/>
+        <path d="M24 17 L24 29 M19 23 L29 23" stroke="var(--brass)" stroke-width="1.3"/>
+      </svg>
       <div class="badge-num">DIV. 7 — CASO ABIERTO</div>
       <h1>DAI Rebelión</h1>
       <div class="sub">Asuntos Internos · Panel</div>
+    </div>
+    <div style="padding:0 12px 12px 12px; position:relative;">
+      <input id="buscador-global" placeholder="Buscar en todo el panel..." oninput="buscarGlobal()" onfocus="buscarGlobal()"
+        style="width:100%; background:var(--navy-950); border:1px solid var(--navy-700); color:var(--paper); padding:9px 10px; border-radius:4px; font-size:12.5px;">
+      <div id="resultados-globales" style="display:none; position:absolute; top:100%; left:12px; right:12px; z-index:40; background:var(--navy-800); border:1px solid var(--brass-dim); border-radius:6px; margin-top:4px; max-height:340px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.5);"></div>
     </div>
     <nav>
       <button class="nav-btn active" data-view="panel"><span class="n">01</span> Panel general</button>
@@ -263,10 +289,12 @@
       <button class="nav-btn" data-view="bitacoras"><span class="n">03</span> Bitácoras</button>
       <button class="nav-btn" data-view="sanciones"><span class="n">04</span> Sanciones</button>
       <button class="nav-btn" data-view="bonos"><span class="n">05</span> Bonos</button>
+      <button class="nav-btn" data-view="ascensos"><span class="n">06</span> Ascensos</button>
     </nav>
     <div class="sidebar-footer">
       <div id="usuario-actual" style="color:var(--paper); font-size:12.5px; margin-bottom:8px; display:flex; align-items:center;"></div>
       <a href="#" onclick="cerrarSesion(); return false;" style="color:var(--brass-dim); font-size:11px; text-decoration:none;">Cerrar sesión</a>
+      <a href="#" onclick="toggleAltoContraste(); return false;" style="color:var(--brass-dim); font-size:11px; text-decoration:none; display:block; margin-top:6px;">Alto contraste: <span id="estado-contraste">Desactivado</span></a>
       <div style="margin-top:10px;">DATOS COMPARTIDOS<br>Visibles para todo el equipo con acceso a este panel.</div>
     </div>
   </aside>
@@ -341,8 +369,8 @@
         <div class="stamp">EXPEDIENTES<br>DEL SERVIDOR</div>
       </header>
 
-      <div class="panel">
-        <h3>Registrar nuevo agente</h3>
+      <div class="panel" id="panel-form-agente">
+        <h3 id="titulo-form-agente">Registrar nuevo agente</h3>
         <div class="form-grid">
           <div class="field"><label>Nro. Placa</label><input id="ag-placa" placeholder="Ej. 0135"></div>
           <div class="field"><label>Nombre IC</label><input id="ag-nombre" placeholder="Ej. J. Ramírez"></div>
@@ -393,7 +421,10 @@
           </div>
           <div class="field"><label>Sub-división</label><input id="ag-subdivision" placeholder="Ej. DAI"></div>
           <div class="field"><label>Departamento</label><input id="ag-departamento" placeholder="Ej. DIRECTIVA"></div>
-          <div class="field"><button class="btn" onclick="addAgente()">Registrar</button></div>
+          <div class="field" style="display:flex; gap:8px;">
+            <button class="btn" id="btn-guardar-agente" onclick="addAgente()">Registrar</button>
+            <button class="btn secondary" id="btn-cancelar-edicion" onclick="cancelarEdicionAgente()" style="display:none;">Cancelar</button>
+          </div>
         </div>
       </div>
 
@@ -535,6 +566,90 @@
       </div>
 
       <div id="tabla-bonos"></div>
+    </section>
+
+    <!-- ASCENSOS -->
+    <section class="view" id="view-ascensos">
+      <header class="top">
+        <h2>Ascensos</h2>
+        <div class="stamp">AUTOMATIZACIÓN<br>DE RANGOS</div>
+      </header>
+
+      <div class="panel">
+        <h3>Ascenso manual</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>Agente</label>
+            <select id="asc-agente"></select>
+          </div>
+          <div class="field">
+            <label>Rango de destino</label>
+            <select id="asc-rango-destino">
+              <optgroup label="Alto mando">
+                <option value="Director General">Director General</option>
+                <option value="Sub Director">Sub Director</option>
+                <option value="Jefe Departamento">Jefe Departamento</option>
+                <option value="Sub Jefe de Departamento">Sub Jefe de Departamento</option>
+                <option value="Dev. Discord">Dev. Discord</option>
+                <option value="Staff">Staff</option>
+                <option value="Admin Staff Policial">Admin Staff Policial</option>
+              </optgroup>
+              <optgroup label="Divisiones">
+                <option value="DIRECTIVA">DIRECTIVA</option>
+                <option value="DAI">DAI</option>
+                <option value="CICPC">CICPC</option>
+              </optgroup>
+              <optgroup label="Comisarios">
+                <option value="Comisario Superior">Comisario Superior</option>
+                <option value="Comisario General">Comisario General</option>
+                <option value="Primer Comisario">Primer Comisario</option>
+              </optgroup>
+              <optgroup label="Comisionados">
+                <option value="Comisionado Jefe">Comisionado Jefe</option>
+                <option value="Comisionado">Comisionado</option>
+              </optgroup>
+              <optgroup label="Inspectores">
+                <option value="Inspector Jefe">Inspector Jefe</option>
+                <option value="Inspector">Inspector</option>
+              </optgroup>
+              <optgroup label="Oficiales">
+                <option value="Oficial Jefe">Oficial Jefe</option>
+                <option value="Primer Oficial">Primer Oficial</option>
+                <option value="Oficial">Oficial</option>
+                <option value="AGENTE">AGENTE</option>
+              </optgroup>
+              <optgroup label="Base">
+                <option value="Cadete">Cadete</option>
+                <option value="Jubilado">Jubilado</option>
+                <option value="POLICIA">POLICIA</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field"><label>Fecha del ascenso</label><input id="asc-fecha" type="date"></div>
+          <div class="field" style="grid-column: span 3;"><label>Nota (opcional — queda en el historial)</label><input id="asc-nota" placeholder="Ej. Ascenso merecido por su desempeño en el operativo Delta"></div>
+          <div class="field"><button class="btn" onclick="ejecutarAscensoManual()">Ejecutar ascenso</button></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Requisitos de días por rango</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Define cuántos días mínimos debe tener un agente en su rango actual para aparecer como "elegible". Deja en 0 los rangos que no aplican (ej. el más alto).</p>
+        <div id="form-requisitos" class="form-grid"></div>
+        <button class="btn secondary" style="margin-top:14px;" onclick="guardarRequisitos()">Guardar requisitos</button>
+      </div>
+
+      <div class="section-title">
+        Acciones globales
+        <span style="display:flex; align-items:center; gap:6px; flex:none; text-transform:none; letter-spacing:0;">
+          <button class="btn danger" onclick="reiniciarRelojes()">Reiniciar relojes (todos a 0d)</button>
+        </span>
+      </div>
+
+      <div class="section-title">Oficiales elegibles para ascenso</div>
+      <div id="tabla-elegibles"></div>
+
+      <div class="section-title">En progreso</div>
+      <div id="tabla-en-progreso"></div>
     </section>
 
   </main>
@@ -694,6 +809,17 @@ let bitacoras = [];
 let sanciones = [];
 let bonos = [];
 let historialRangos = [];
+let requisitosAscenso = {};
+
+const RANGOS_ORDEN = [
+  'Director General','Sub Director','Jefe Departamento','Sub Jefe de Departamento','Dev. Discord','Staff','Admin Staff Policial',
+  'DIRECTIVA','DAI','CICPC',
+  'Comisario Superior','Comisario General','Primer Comisario',
+  'Comisionado Jefe','Comisionado',
+  'Inspector Jefe','Inspector',
+  'Oficial Jefe','Primer Oficial','Oficial','AGENTE',
+  'Cadete','Jubilado','POLICIA'
+];
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function showToast(msg){
@@ -766,6 +892,12 @@ function initListeners(){
     historialRangos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderHistorialRangos();
   }, ()=>{});
+
+  db.collection('config').doc('requisitosAscenso').onSnapshot(doc=>{
+    requisitosAscenso = doc.exists ? (doc.data().dias || {}) : {};
+    renderRequisitosForm();
+    renderAscensos();
+  }, ()=>{});
 }
 
 // ---------- ACTIONS ----------
@@ -781,18 +913,15 @@ async function addAgente(){
   try{
     const id = placa ? ('placa-'+placa) : uid();
     const anterior = agentes.find(a=>a.id===id);
-    await db.collection('agentes').doc(id).set({ placa, nombre, nombreOOC, discord, rango, subdivision, departamento, estado:'activo', creado: Date.now() }, { merge:true });
+    const datos = { placa, nombre, nombreOOC, discord, rango, subdivision, departamento, estado: anterior?.estado || 'activo' };
+    if(!anterior) datos.creado = Date.now(); // solo se fija la fecha de alta la primera vez
+    await db.collection('agentes').doc(id).set(datos, { merge:true });
     if(anterior && anterior.rango && anterior.rango !== rango){
       await registrarCambioRango(id, nombre, anterior.rango, rango);
     }
-    registrarAuditoria(`Registró al agente ${nombre}${placa? ' (#'+placa+')':''}`);
-    document.getElementById('ag-placa').value='';
-    document.getElementById('ag-nombre').value='';
-    document.getElementById('ag-nombreooc').value='';
-    document.getElementById('ag-discord').value='';
-    document.getElementById('ag-subdivision').value='';
-    document.getElementById('ag-departamento').value='';
-    showToast('Agente registrado');
+    registrarAuditoria(anterior ? `Editó al agente ${nombre}${placa? ' (#'+placa+')':''}` : `Registró al agente ${nombre}${placa? ' (#'+placa+')':''}`);
+    cancelarEdicionAgente();
+    showToast(anterior ? 'Cambios guardados' : 'Agente registrado');
   }catch(e){ showToast('Error al guardar el agente'); }
 }
 
@@ -926,6 +1055,37 @@ async function eliminarAgente(id){
   catch(e){ showToast('Error al eliminar'); }
 }
 
+function editarAgente(id){
+  const ag = agentes.find(a=>a.id===id);
+  if(!ag) return;
+  document.getElementById('ag-placa').value = ag.placa || '';
+  document.getElementById('ag-nombre').value = ag.nombre || '';
+  document.getElementById('ag-nombreooc').value = ag.nombreOOC || '';
+  document.getElementById('ag-discord').value = ag.discord || '';
+  document.getElementById('ag-rango').value = ag.rango || '';
+  document.getElementById('ag-subdivision').value = ag.subdivision || '';
+  document.getElementById('ag-departamento').value = ag.departamento || '';
+
+  document.getElementById('titulo-form-agente').textContent = `Editando a ${ag.nombre}`;
+  document.getElementById('btn-guardar-agente').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-edicion').style.display = 'inline-block';
+  document.getElementById('panel-form-agente').scrollIntoView({ behavior:'smooth', block:'start' });
+  showToast('Modifica lo que necesites y presiona "Guardar cambios"');
+}
+
+function cancelarEdicionAgente(){
+  document.getElementById('ag-placa').value = '';
+  document.getElementById('ag-nombre').value = '';
+  document.getElementById('ag-nombreooc').value = '';
+  document.getElementById('ag-discord').value = '';
+  document.getElementById('ag-rango').value = '';
+  document.getElementById('ag-subdivision').value = '';
+  document.getElementById('ag-departamento').value = '';
+  document.getElementById('titulo-form-agente').textContent = 'Registrar nuevo agente';
+  document.getElementById('btn-guardar-agente').textContent = 'Registrar';
+  document.getElementById('btn-cancelar-edicion').style.display = 'none';
+}
+
 async function addBitacora(){
   const agenteId = document.getElementById('bi-agente').value;
   const tipo = document.getElementById('bi-tipo').value;
@@ -1020,6 +1180,7 @@ function renderSelects(){
   document.getElementById('bi-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
   document.getElementById('sa-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
   document.getElementById('bo-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+  document.getElementById('asc-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
 }
 
 function renderAgentesTabla(){
@@ -1050,7 +1211,7 @@ function renderAgentesTabla(){
       <td><span class="tally">${countSancionesActivas(a.id)}</span></td>
       <td><span class="pill ${a.estado==='activo'?'activo':'sancionado'}" style="cursor:pointer" onclick="toggleEstadoAgente('${a.id}')">${a.estado}</span></td>
       <td><button class="icon-btn" onclick="editarNota('${a.id}')" title="${a.notas? a.notas.replace(/"/g,'&quot;') : 'Sin notas'}">${a.notas? '📝' : '➕'}</button></td>
-      <td class="row-actions"><button class="icon-btn" onclick="eliminarAgente('${a.id}')">Eliminar</button></td>
+      <td class="row-actions"><button class="icon-btn" onclick="editarAgente('${a.id}')" style="color:var(--brass);">Editar</button><button class="icon-btn" onclick="eliminarAgente('${a.id}')">Eliminar</button></td>
     </tr>`).join('')}
   </tbody></table>`;
 }
@@ -1083,7 +1244,7 @@ function renderHistorialRangos(){
   if(!historialRangos.length){ el.innerHTML = '<div class="empty">No hay cambios de rango registrados todavía.</div>'; return; }
   const lista = historialRangos.slice(0,20);
   el.innerHTML = `<table><thead><tr>
-    <th>Fecha</th><th>Agente</th><th>Rango anterior</th><th>Rango nuevo</th><th>Registrado por</th>
+    <th>Fecha</th><th>Agente</th><th>Rango anterior</th><th>Rango nuevo</th><th>Nota</th><th>Registrado por</th>
   </tr></thead><tbody>
   ${lista.map(h=>`
     <tr>
@@ -1091,6 +1252,7 @@ function renderHistorialRangos(){
       <td>${h.agenteNombre||'—'}</td>
       <td>${iconoRango(h.rangoAnterior)} ${h.rangoAnterior||'—'}</td>
       <td>${iconoRango(h.rangoNuevo)} ${h.rangoNuevo||'—'}</td>
+      <td>${h.nota||'—'}</td>
       <td>${h.usuario||'—'}</td>
     </tr>`).join('')}
   </tbody></table>`;
@@ -1336,6 +1498,7 @@ function renderAll(){
   renderSancionesTabla();
   renderBonosTabla();
   renderPanel();
+  renderAscensos();
 }
 
 // ---------- NAV ----------
@@ -1352,6 +1515,7 @@ document.getElementById('fecha-actual').textContent = new Date().toLocaleDateStr
 document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
 document.getElementById('bo-fecha').valueAsDate = new Date();
+document.getElementById('asc-fecha').valueAsDate = new Date();
 actualizarTipoPeriodo();
 
 // ---------- VISTA POLICÍA (solo lectura) ----------
@@ -1436,6 +1600,260 @@ function renderPoliciaBonos(lista){
       <td>${b.registradoPor||'—'}</td>
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes bonos registrados.</div>';
+}
+
+// ---------- ASCENSOS ----------
+function fechaHoyISO(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function fechaBaseAgente(agente){
+  // Si nunca tuvo un ascenso registrado, usamos la fecha en que se registró como punto de partida
+  if(agente.fechaUltimoAscenso) return agente.fechaUltimoAscenso;
+  if(agente.creado) return new Date(agente.creado).toISOString().slice(0,10);
+  return null;
+}
+
+function diasEnRango(agente){
+  const base = fechaBaseAgente(agente);
+  if(!base) return null;
+  const [y,m,d] = base.split('-').map(Number);
+  const fechaBase = new Date(y, m-1, d);
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return Math.floor((hoy - fechaBase) / 86400000);
+}
+
+function bitacorasDesdeAscenso(agente){
+  const base = fechaBaseAgente(agente);
+  if(!base) return 0;
+  return bitacoras.filter(b=>b.agenteId===agente.id && b.fecha && b.fecha >= base).length;
+}
+
+function renderRequisitosForm(){
+  const el = document.getElementById('form-requisitos');
+  if(!el) return;
+  el.innerHTML = RANGOS_ORDEN.map(r=>`
+    <div class="field">
+      <label>${iconoRango(r)} ${r}</label>
+      <input type="number" min="0" class="req-rango-input" data-rango="${r}" value="${requisitosAscenso[r] || 0}">
+    </div>`).join('');
+}
+
+async function guardarRequisitos(){
+  const inputs = document.querySelectorAll('.req-rango-input');
+  const dias = {};
+  inputs.forEach(inp=>{
+    const v = parseInt(inp.value, 10) || 0;
+    if(v > 0) dias[inp.dataset.rango] = v;
+  });
+  try{
+    await db.collection('config').doc('requisitosAscenso').set({ dias });
+    registrarAuditoria('Actualizó los requisitos de días por rango');
+    showToast('Requisitos guardados');
+  }catch(e){ showToast('Error al guardar los requisitos'); }
+}
+
+function renderAscensos(){
+  const elElegibles = document.getElementById('tabla-elegibles');
+  const elProgreso = document.getElementById('tabla-en-progreso');
+  if(!elElegibles || !elProgreso) return;
+
+  const activos = agentes.filter(a=>a.estado==='activo');
+  const conDatos = activos.map(a=>{
+    const requisito = requisitosAscenso[a.rango] || 0;
+    const dias = diasEnRango(a);
+    const bitacorasMarcadas = bitacorasDesdeAscenso(a);
+    return { agente:a, requisito, dias, bitacorasMarcadas };
+  }).filter(x => x.requisito > 0 && x.dias !== null);
+
+  const elegibles = conDatos.filter(x=> x.dias >= x.requisito).sort((a,b)=> b.dias - a.dias);
+  const enProgreso = conDatos.filter(x=> x.dias < x.requisito).sort((a,b)=> b.dias - a.dias);
+
+  elElegibles.innerHTML = elegibles.length ? `<table><thead><tr>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Requeridos</th><th></th>
+  </tr></thead><tbody>
+  ${elegibles.map(x=>`
+    <tr>
+      <td class="mono">${x.agente.placa||'—'}</td>
+      <td>${x.agente.nombre}</td>
+      <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
+      <td class="mono"><span class="pill activo">${x.dias}d</span></td>
+      <td class="mono">${x.bitacorasMarcadas}</td>
+      <td class="mono">${x.requisito}d</td>
+      <td class="row-actions"><button class="btn" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Ascender</button></td>
+    </tr>`).join('')}
+  </tbody></table>` : '<div class="empty">Nadie cumple los días requeridos todavía.</div>';
+
+  elProgreso.innerHTML = enProgreso.length ? `<table><thead><tr>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Requeridos</th><th>Progreso</th><th></th>
+  </tr></thead><tbody>
+  ${enProgreso.map(x=>{
+    const pct = Math.min(100, Math.round((x.dias / x.requisito) * 100));
+    return `
+    <tr>
+      <td class="mono">${x.agente.placa||'—'}</td>
+      <td>${x.agente.nombre}</td>
+      <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
+      <td class="mono">${x.dias}d</td>
+      <td class="mono">${x.bitacorasMarcadas}</td>
+      <td class="mono">${x.requisito}d</td>
+      <td style="min-width:110px;">
+        <div style="background:var(--navy-800); border:1px solid var(--navy-700); border-radius:20px; height:8px; overflow:hidden;">
+          <div style="width:${pct}%; height:100%; background:var(--brass-dim);"></div>
+        </div>
+        <div class="mono" style="font-size:10.5px; color:var(--paper-dim); margin-top:3px;">${pct}%</div>
+      </td>
+      <td class="row-actions"><button class="btn secondary" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Adelantar</button></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>` : '<div class="empty">No hay agentes con requisito configurado en progreso.</div>';
+}
+
+function prellenarAscenso(agenteId){
+  document.getElementById('asc-agente').value = agenteId;
+  document.getElementById('view-ascensos').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+async function ejecutarAscensoManual(){
+  const agenteId = document.getElementById('asc-agente').value;
+  const rangoNuevo = document.getElementById('asc-rango-destino').value;
+  const fecha = document.getElementById('asc-fecha').value || fechaHoyISO();
+  const nota = document.getElementById('asc-nota').value.trim();
+  if(!agenteId){ showToast('Selecciona un agente'); return; }
+
+  const agente = agentes.find(a=>a.id===agenteId);
+  if(!agente){ showToast('No se encontró el agente'); return; }
+
+  const rangoAnterior = agente.rango || '(sin rango)';
+  try{
+    await db.collection('agentes').doc(agenteId).update({
+      rango: rangoNuevo,
+      fechaUltimoAscenso: fecha
+    });
+
+    await db.collection('historialRangos').doc(uid()).set({
+      agenteId, agenteNombre: agente.nombre,
+      rangoAnterior, rangoNuevo, nota,
+      usuario: usuarioActual?.global_name || 'Desconocido',
+      creado: Date.now()
+    });
+
+    registrarAuditoria(`Ascendió a ${agente.nombre}: ${rangoAnterior} → ${rangoNuevo}`);
+    document.getElementById('asc-nota').value = '';
+    showToast(`${agente.nombre} ascendido a ${rangoNuevo}`);
+  }catch(e){ showToast('Error al ejecutar el ascenso'); }
+}
+
+async function reiniciarRelojes(){
+  if(!confirm('Esto va a reiniciar el contador de días de TODOS los agentes activos a 0. ¿Continuar?')) return;
+  try{
+    const hoy = fechaHoyISO();
+    const activos = agentes.filter(a=>a.estado==='activo');
+    let batch = db.batch();
+    let ops = 0;
+    for(const a of activos){
+      batch.update(db.collection('agentes').doc(a.id), { fechaUltimoAscenso: hoy });
+      ops++;
+      if(ops >= 450){ await batch.commit(); batch = db.batch(); ops = 0; }
+    }
+    if(ops > 0) await batch.commit();
+    registrarAuditoria(`Reinició el reloj de ascensos de ${activos.length} agentes`);
+    showToast('Relojes reiniciados');
+  }catch(e){ showToast('Error al reiniciar los relojes'); }
+}
+
+// ---------- BUSCADOR GLOBAL ----------
+function irAVista(nombreVista){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const btn = document.querySelector(`.nav-btn[data-view="${nombreVista}"]`);
+  if(btn) btn.classList.add('active');
+  document.getElementById('view-'+nombreVista).classList.add('active');
+}
+
+function irAAgente(agenteId, termino){
+  irAVista('agentes');
+  const buscador = document.getElementById('buscar-agente');
+  if(buscador){ buscador.value = termino || ''; renderAgentesTabla(); }
+  ocultarResultadosGlobales();
+}
+
+function buscarGlobal(){
+  const termino = document.getElementById('buscador-global').value.trim().toLowerCase();
+  const el = document.getElementById('resultados-globales');
+  if(!termino){ el.style.display = 'none'; return; }
+
+  const matchAgentes = agentes.filter(a =>
+    (a.nombre||'').toLowerCase().includes(termino) ||
+    (a.placa||'').toLowerCase().includes(termino) ||
+    (a.nombreOOC||'').toLowerCase().includes(termino)
+  ).slice(0,5);
+
+  const matchBitacoras = bitacoras.filter(b => (b.desc||'').toLowerCase().includes(termino)).slice(0,5);
+  const matchSanciones = sanciones.filter(s => (s.motivo||'').toLowerCase().includes(termino)).slice(0,5);
+
+  if(!matchAgentes.length && !matchBitacoras.length && !matchSanciones.length){
+    el.innerHTML = '<div style="padding:14px; font-size:12px; color:var(--paper-dim);">Sin resultados.</div>';
+    el.style.display = 'block';
+    return;
+  }
+
+  const fila = (icono, titulo, subtitulo, onclick) => `
+    <div onclick="${onclick}" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid var(--navy-700); display:flex; gap:10px; align-items:center;"
+      onmouseover="this.style.background='var(--navy-700)'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:14px;">${icono}</span>
+      <div style="min-width:0;">
+        <div style="font-size:12.5px; color:var(--paper); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${titulo}</div>
+        <div style="font-size:10.5px; color:var(--paper-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${subtitulo}</div>
+      </div>
+    </div>`;
+
+  let html = '';
+  if(matchAgentes.length){
+    html += '<div style="padding:8px 14px 2px; font-size:10px; color:var(--brass-dim); letter-spacing:1px;">AGENTES</div>';
+    html += matchAgentes.map(a => fila('👤', `${a.placa? '#'+a.placa+' — ':''}${a.nombre}`, a.rango||'', `irAAgente('${a.id}','${(a.placa||a.nombre).replace(/'/g,"")}')`)).join('');
+  }
+  if(matchBitacoras.length){
+    html += '<div style="padding:8px 14px 2px; font-size:10px; color:var(--brass-dim); letter-spacing:1px;">BITÁCORAS</div>';
+    html += matchBitacoras.map(b => fila('📋', b.desc||'', nombreAgente(b.agenteId)+' · '+fmtDate(b.fecha), `irAVista('bitacoras'); ocultarResultadosGlobales();`)).join('');
+  }
+  if(matchSanciones.length){
+    html += '<div style="padding:8px 14px 2px; font-size:10px; color:var(--brass-dim); letter-spacing:1px;">SANCIONES</div>';
+    html += matchSanciones.map(s => fila('⚠️', s.motivo||'', nombreAgente(s.agenteId)+' · '+fmtDate(s.fecha), `irAVista('sanciones'); ocultarResultadosGlobales();`)).join('');
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function ocultarResultadosGlobales(){
+  const el = document.getElementById('resultados-globales');
+  if(el) el.style.display = 'none';
+  const buscador = document.getElementById('buscador-global');
+  if(buscador) buscador.value = '';
+}
+
+document.addEventListener('click', (e)=>{
+  const buscador = document.getElementById('buscador-global');
+  const resultados = document.getElementById('resultados-globales');
+  if(!buscador || !resultados) return;
+  if(!buscador.contains(e.target) && !resultados.contains(e.target)){
+    resultados.style.display = 'none';
+  }
+});
+
+// ---------- ALTO CONTRASTE ----------
+function toggleAltoContraste(){
+  document.body.classList.toggle('alto-contraste');
+  const activo = document.body.classList.contains('alto-contraste');
+  localStorage.setItem('daiAltoContraste', activo ? '1' : '0');
+  const estado = document.getElementById('estado-contraste');
+  if(estado) estado.textContent = activo ? 'Activado' : 'Desactivado';
+}
+
+if(localStorage.getItem('daiAltoContraste') === '1'){
+  document.body.classList.add('alto-contraste');
+  const estadoInicial = document.getElementById('estado-contraste');
+  if(estadoInicial) estadoInicial.textContent = 'Activado';
 }
 
 initAuth();
