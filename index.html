@@ -1041,6 +1041,7 @@ async function toggleEstadoAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
   const nuevoEstado = ag.estado === 'activo' ? 'sancionado' : 'activo';
+  if(!confirm(`¿Cambiar el estado de ${ag.nombre} a "${nuevoEstado}"?`)) return;
   try{
     await db.collection('agentes').doc(id).update({ estado: nuevoEstado });
     registrarAuditoria(`Cambió el estado de ${ag.nombre} a "${nuevoEstado}"`);
@@ -1050,6 +1051,7 @@ async function toggleEstadoAgente(id){
 
 async function eliminarAgente(id){
   const nombre = nombreAgente(id);
+  if(!confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer. Sus bitácoras, sanciones y bonos se quedarán, pero ya no se verán ligados a un agente activo.`)) return;
   try{
     await db.collection('agentes').doc(id).delete();
     registrarAuditoria(`Eliminó al agente ${nombre}`);
@@ -1105,6 +1107,7 @@ async function addBitacora(){
 
 async function eliminarBitacora(id){
   const b = bitacoras.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar esta bitácora de ${b? nombreAgente(b.agenteId) : 'este agente'}? No se puede deshacer.`)) return;
   try{
     await db.collection('bitacoras').doc(id).delete();
     if(b) registrarAuditoria(`Eliminó una bitácora de ${nombreAgente(b.agenteId)}`);
@@ -1131,6 +1134,7 @@ async function addBono(){
 
 async function eliminarBono(id){
   const b = bonos.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar este pago de bono${b? ' de '+nombreAgente(b.agenteId) : ''}${b?.monto? ' ($'+b.monto+')':''}? No se puede deshacer.`)) return;
   try{
     await db.collection('bonos').doc(id).delete();
     if(b) registrarAuditoria(`Eliminó un pago de bono de ${nombreAgente(b.agenteId)}`);
@@ -1157,6 +1161,7 @@ async function addSancion(){
 
 async function eliminarSancion(id){
   const s = sanciones.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar esta sanción${s? ' de '+nombreAgente(s.agenteId) : ''}? No se puede deshacer.`)) return;
   try{
     await db.collection('sanciones').doc(id).delete();
     if(s) registrarAuditoria(`Eliminó una sanción de ${nombreAgente(s.agenteId)}`);
@@ -1727,6 +1732,7 @@ async function ejecutarAscensoManual(){
   if(!agente){ showToast('No se encontró el agente'); return; }
 
   const rangoAnterior = agente.rango || '(sin rango)';
+  if(!confirm(`¿Confirmas el cambio de rango de ${agente.nombre}?\n\n${rangoAnterior} → ${rangoNuevo}`)) return;
   try{
     await db.collection('agentes').doc(agenteId).update({
       rango: rangoNuevo,
