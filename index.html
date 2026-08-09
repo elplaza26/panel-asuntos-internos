@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -248,7 +246,7 @@
   <h1 style="font-family:var(--font-display); font-size:32px;">DAI Rebelión</h1>
   <p style="color:var(--paper-dim); font-size:13.5px; max-width:340px;">Inicia sesión con tu cuenta de Discord para acceder al panel de Asuntos Internos.</p>
   <button class="btn" onclick="iniciarLoginDiscord()" style="padding:12px 26px;">Iniciar sesión con Discord</button>
-  <div id="login-error" style="color:#e08678; font-size:12px; display:none;"></div>
+  <div id="login-error" style="color:#e08678; font-size:12px; display:none; max-width:480px; word-break:break-word; line-height:1.6;"></div>
 </div>
 
 <div class="app" id="app-content" style="display:none;">
@@ -523,6 +521,45 @@
   </main>
 </div>
 
+<div class="app" id="app-policia" style="display:none;">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="badge-num">DIV. 7 — CONSULTA PERSONAL</div>
+      <h1>DAI Rebelión</h1>
+      <div class="sub">Mi expediente</div>
+    </div>
+    <div class="sidebar-footer">
+      <div id="usuario-actual-policia" style="color:var(--paper); font-size:12.5px; margin-bottom:8px; display:flex; align-items:center;"></div>
+      <a href="#" onclick="cerrarSesion(); return false;" style="color:var(--brass-dim); font-size:11px; text-decoration:none;">Cerrar sesión</a>
+      <div style="margin-top:10px;">SOLO LECTURA<br>No puedes modificar esta información.</div>
+    </div>
+  </aside>
+
+  <main>
+    <section class="view active">
+      <header class="top">
+        <h2>Mi expediente</h2>
+        <div class="stamp">CONSULTA<br>PERSONAL</div>
+      </header>
+
+      <div id="policia-sin-registro" class="empty" style="display:none;">
+        No encontramos un agente registrado con tu cuenta de Discord. Contacta a Asuntos Internos para que verifiquen tu registro.
+      </div>
+
+      <div id="policia-info"></div>
+
+      <div class="section-title">Mis bitácoras</div>
+      <div id="policia-bitacoras"></div>
+
+      <div class="section-title">Mis sanciones</div>
+      <div id="policia-sanciones"></div>
+
+      <div class="section-title">Mis bonos</div>
+      <div id="policia-bonos"></div>
+    </section>
+  </main>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -578,9 +615,9 @@ async function initAuth(){
         mostrarApp();
         return;
       }else if(data.id && !data.autorizado){
-        mostrarErrorLogin('Tu cuenta de Discord no tiene el rol autorizado para entrar a este panel.');
+        mostrarErrorLogin(data.debugInfo || 'Tu cuenta de Discord no tiene el rol autorizado para entrar a este panel.');
       }else{
-        mostrarErrorLogin('No se pudo verificar la sesión con Discord. Intenta de nuevo.');
+        mostrarErrorLogin(data.error || 'No se pudo verificar la sesión con Discord. Intenta de nuevo.');
       }
     }catch(e){
       mostrarErrorLogin('Error al conectar con el servidor de login.');
@@ -592,12 +629,22 @@ async function initAuth(){
 
 function mostrarApp(){
   document.getElementById('login-gate').style.display = 'none';
-  document.getElementById('app-content').style.display = 'flex';
-  const badge = document.getElementById('usuario-actual');
-  if(badge && usuarioActual){
-    badge.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
+
+  if(usuarioActual && usuarioActual.esDai){
+    document.getElementById('app-content').style.display = 'flex';
+    const badge = document.getElementById('usuario-actual');
+    if(badge){
+      badge.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
+    }
+    initListeners();
+  }else{
+    document.getElementById('app-policia').style.display = 'flex';
+    const badge2 = document.getElementById('usuario-actual-policia');
+    if(badge2){
+      badge2.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
+    }
+    initListenersPolicia();
   }
-  initListeners();
 }
 
 function mostrarLogin(){
@@ -730,7 +777,7 @@ async function importarExcel(){
     const buffer = await file.arrayBuffer();
     const wb = XLSX.read(buffer, { type:'array' });
     const hoja = wb.Sheets[wb.SheetNames[0]];
-    const filasCrudas = XLSX.utils.sheet_to_json(hoja, { header:1, defval:'' });
+    const filasCrudas = XLSX.utils.sheet_to_json(hoja, { header:1, defval:'', raw:false });
 
     // Buscar la fila real de encabezados (puede no ser la primera si hay títulos o filas decorativas antes)
     let idxEncabezado = -1;
@@ -854,7 +901,7 @@ async function addBono(){
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!periodo){ showToast('Escribe el periodo'); return; }
   try{
-    await db.collection('bonos').doc(uid()).set({ agenteId, periodicidad, periodo, monto, fecha, creado: Date.now() });
+    await db.collection('bonos').doc(uid()).set({ agenteId, periodicidad, periodo, monto, fecha, registradoPor: usuarioActual?.global_name || 'Desconocido', creado: Date.now() });
     registrarAuditoria(`Registró un bono de $${monto} a ${nombreAgente(agenteId)}`);
     document.getElementById('bo-periodo').value='';
     document.getElementById('bo-monto').value='';
@@ -1087,7 +1134,7 @@ function renderBonosTabla(){
   if(!lista.length){ el.innerHTML = '<div class="empty">Ningún pago coincide con la búsqueda.</div>'; return; }
 
   el.innerHTML = `<table><thead><tr>
-    <th>Fecha de pago</th><th>Agente</th><th>Periodicidad</th><th>Periodo</th><th>Monto</th><th></th>
+    <th>Fecha de pago</th><th>Agente</th><th>Periodicidad</th><th>Periodo</th><th>Monto</th><th>Registrado por</th><th></th>
   </tr></thead><tbody>
   ${lista.map(b=>`
     <tr>
@@ -1096,6 +1143,7 @@ function renderBonosTabla(){
       <td>${b.periodicidad||'—'}</td>
       <td>${fmtPeriodo(b.periodicidad, b.periodo)}</td>
       <td class="mono">$${(Number(b.monto)||0).toLocaleString('es-ES', { maximumFractionDigits:2 })}</td>
+      <td>${b.registradoPor||'—'}</td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarBono('${b.id}')">Eliminar</button></td>
     </tr>`).join('')}
   </tbody></table>`;
@@ -1125,6 +1173,90 @@ document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
 document.getElementById('bo-fecha').valueAsDate = new Date();
 actualizarTipoPeriodo();
+
+// ---------- VISTA POLICÍA (solo lectura) ----------
+async function initListenersPolicia(){
+  try{
+    const snap = await db.collection('agentes').where('discord','==', usuarioActual.id).limit(1).get();
+    if(snap.empty){
+      document.getElementById('policia-sin-registro').style.display = 'block';
+      return;
+    }
+    const doc = snap.docs[0];
+    const agente = { id: doc.id, ...doc.data() };
+    renderPoliciaInfo(agente);
+
+    db.collection('bitacoras').where('agenteId','==', agente.id).onSnapshot(s=>{
+      const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+      renderPoliciaBitacoras(lista);
+    });
+    db.collection('sanciones').where('agenteId','==', agente.id).onSnapshot(s=>{
+      const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+      renderPoliciaSanciones(lista);
+    });
+    db.collection('bonos').where('agenteId','==', agente.id).onSnapshot(s=>{
+      const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+      renderPoliciaBonos(lista);
+    });
+  }catch(e){
+    showToast('Error al cargar tu expediente');
+  }
+}
+
+function renderPoliciaInfo(agente){
+  document.getElementById('policia-info').innerHTML = `
+    <div class="grid-cards" style="grid-template-columns: repeat(4,1fr); margin-bottom:24px;">
+      <div class="card"><div class="label">Placa</div><div class="value" style="font-size:22px;">${agente.placa||'—'}</div></div>
+      <div class="card"><div class="label">Nombre IC</div><div class="value" style="font-size:16px;">${agente.nombre}</div></div>
+      <div class="card"><div class="label">Rango</div><div class="value" style="font-size:16px;">${agente.rango||'—'}</div></div>
+      <div class="card"><div class="label">Estado</div><div class="value" style="font-size:16px;"><span class="pill ${agente.estado==='activo'?'activo':'sancionado'}">${agente.estado}</span></div></div>
+    </div>`;
+}
+
+function renderPoliciaBitacoras(lista){
+  const el = document.getElementById('policia-bitacoras');
+  el.innerHTML = lista.length ? `<table><thead><tr>
+    <th>Fecha</th><th>Tipo</th><th>Descripción</th>
+  </tr></thead><tbody>
+  ${lista.map(b=>`
+    <tr>
+      <td class="mono">${fmtDate(b.fecha)}</td>
+      <td><span class="pill ${claseTipoBitacora(b.tipo)}">${b.tipo||'Servicio regular'}</span></td>
+      <td>${b.desc||'—'}</td>
+    </tr>`).join('')}
+  </tbody></table>` : '<div class="empty">No tienes bitácoras registradas.</div>';
+}
+
+function renderPoliciaSanciones(lista){
+  const el = document.getElementById('policia-sanciones');
+  el.innerHTML = lista.length ? `<table><thead><tr>
+    <th>Fecha</th><th>Gravedad</th><th>Motivo</th><th>Evidencia</th>
+  </tr></thead><tbody>
+  ${lista.map(s=>`
+    <tr>
+      <td class="mono">${fmtDate(s.fecha)}</td>
+      <td><span class="pill ${s.gravedad}">${s.gravedad}</span></td>
+      <td>${s.motivo}</td>
+      <td>${s.evidencia ? `<a class="evidence-link" href="${s.evidencia}" target="_blank" rel="noopener">Ver →</a>` : '—'}</td>
+    </tr>`).join('')}
+  </tbody></table>` : '<div class="empty">No tienes sanciones registradas.</div>';
+}
+
+function renderPoliciaBonos(lista){
+  const el = document.getElementById('policia-bonos');
+  el.innerHTML = lista.length ? `<table><thead><tr>
+    <th>Fecha de pago</th><th>Periodicidad</th><th>Periodo</th><th>Monto</th><th>Registrado por</th>
+  </tr></thead><tbody>
+  ${lista.map(b=>`
+    <tr>
+      <td class="mono">${fmtDate(b.fecha)}</td>
+      <td>${b.periodicidad||'—'}</td>
+      <td>${fmtPeriodo(b.periodicidad, b.periodo)}</td>
+      <td class="mono">$${(Number(b.monto)||0).toLocaleString('es-ES', { maximumFractionDigits:2 })}</td>
+      <td>${b.registradoPor||'—'}</td>
+    </tr>`).join('')}
+  </tbody></table>` : '<div class="empty">No tienes bonos registrados.</div>';
+}
 
 initAuth();
 </script>
