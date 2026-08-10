@@ -476,6 +476,39 @@
         <div class="stamp">REGISTRO DE<br>MARCAJE</div>
       </header>
 
+      <div class="grid-cards">
+        <div class="card">
+          <div class="label">Turnos completados</div>
+          <div class="value" id="stat-turnos-completados">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Horas totales</div>
+          <div class="value" id="stat-horas-totales">0h</div>
+        </div>
+        <div class="card alert">
+          <div class="label">Pendientes H50</div>
+          <div class="value" id="stat-pendientes-h50">0</div>
+        </div>
+        <div class="card">
+          <div class="label">En servicio ahora</div>
+          <div class="value" id="stat-en-servicio">0</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Publicar botones de Entrada/Salida en Discord</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
+          Publica un mensaje con botones "Marcar Entrada" / "Marcar Salida" en el canal que elijas. Cualquiera con su ID de Discord cargado en el panel podrá usarlo — se refleja aquí al instante.
+        </p>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 2;"><label>ID del canal de Discord</label><input id="discord-canal-id" placeholder="Ej. 1234567890123456789"></div>
+          <div class="field"><button class="btn secondary" onclick="publicarPanelDiscord()">Publicar en Discord</button></div>
+        </div>
+      </div>
+
+      <div class="section-title">En servicio (activos)</div>
+      <div id="tabla-en-servicio"></div>
+
       <div class="panel">
         <h3>Registrar bitácora / marcaje</h3>
         <div class="form-grid">
@@ -498,6 +531,7 @@
         </div>
       </div>
 
+      <div class="section-title">Historial</div>
       <div id="tabla-bitacoras"></div>
     </section>
 
@@ -705,6 +739,11 @@
         No encontramos un agente registrado con tu cuenta de Discord. Contacta a Asuntos Internos para que verifiquen tu registro.
       </div>
 
+      <div class="panel" id="panel-control-turno" style="display:none;">
+        <h3>Control de turno</h3>
+        <div id="turno-estado"></div>
+      </div>
+
       <div id="policia-info"></div>
 
       <div class="section-title">Mis bitácoras</div>
@@ -741,6 +780,9 @@ const DISCORD_CLIENT_ID = '1535661121724227604';
 const REDIRECT_URI = 'https://panel-asuntos-internos.vercel.app/';
 let usuarioActual = null;
 let auditoria = [];
+let miAgenteId = null;
+let turnoActivo = null;
+const MINUTOS_H50 = 50;
 
 function iniciarLoginDiscord(){
   const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
@@ -1342,19 +1384,79 @@ function claseTipoBitacora(tipo){
 
 function renderBitacorasTabla(){
   const el = document.getElementById('tabla-bitacoras');
+
+  const completados = bitacoras.filter(b=>b.estadoTurno==='completado');
+  const enServicio = bitacoras.filter(b=>b.estadoTurno==='activo');
+  const totalMin = completados.reduce((acc,b)=> acc + (b.duracionMin||0), 0);
+  const pendientesH50 = bitacoras.filter(b=>b.validacionH50==='pendiente').length;
+
+  const statTurnos = document.getElementById('stat-turnos-completados');
+  const statHoras = document.getElementById('stat-horas-totales');
+  const statPendientes = document.getElementById('stat-pendientes-h50');
+  const statEnServicio = document.getElementById('stat-en-servicio');
+  if(statTurnos) statTurnos.textContent = completados.length;
+  if(statHoras) statHoras.textContent = (totalMin/60).toFixed(1)+'h';
+  if(statPendientes) statPendientes.textContent = pendientesH50;
+  if(statEnServicio) statEnServicio.textContent = enServicio.length;
+
+  const tablaServicio = document.getElementById('tabla-en-servicio');
+  if(tablaServicio){
+    tablaServicio.innerHTML = enServicio.length ? `<table><thead><tr>
+      <th>Agente</th><th>Rango</th><th>Desde</th><th></th>
+    </tr></thead><tbody>
+    ${enServicio.map(b=>`
+      <tr>
+        <td>${nombreAgente(b.agenteId)}</td>
+        <td>${iconoRango(agentes.find(a=>a.id===b.agenteId)?.rango)} ${agentes.find(a=>a.id===b.agenteId)?.rango||'—'}</td>
+        <td class="mono">${fmtHoraSimple(b.entradaTs)}</td>
+        <td class="row-actions"><button class="btn danger" style="padding:6px 14px; font-size:11px;" onclick="forzarCierreTurno('${b.id}')">Forzar cierre</button></td>
+      </tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Nadie está en servicio ahora mismo.</div>';
+  }
+
   if(!bitacoras.length){ el.innerHTML = '<div class="empty">No hay bitácoras registradas todavía.</div>'; return; }
   el.innerHTML = `<table><thead><tr>
-    <th>Fecha</th><th>Agente</th><th>Tipo</th><th>Descripción</th><th></th>
+    <th>Fecha</th><th>Agente</th><th>Tipo</th><th>Entrada</th><th>Salida</th><th>Duración</th><th>H50</th><th>Descripción</th><th></th>
   </tr></thead><tbody>
   ${bitacoras.map(b=>`
     <tr>
       <td class="mono">${fmtDate(b.fecha)}</td>
       <td>${nombreAgente(b.agenteId)}</td>
       <td><span class="pill ${claseTipoBitacora(b.tipo)}">${b.tipo||'Servicio regular'}</span></td>
+      <td class="mono">${fmtHoraSimple(b.entradaTs)}</td>
+      <td class="mono">${b.estadoTurno==='activo' ? '<span class="pill activo">En servicio</span>' : fmtHoraSimple(b.salidaTs)}</td>
+      <td class="mono">${b.duracionMin!=null ? b.duracionMin+' min' : '—'}</td>
+      <td>${b.validacionH50==='pendiente' ? `<button class="btn secondary" style="padding:4px 10px; font-size:10.5px;" onclick="aprobarH50('${b.id}')">Pendiente · Aprobar</button>` : b.validacionH50==='aprobado' ? '<span class="pill activo">Verificado</span>' : '—'}</td>
       <td>${b.desc||'—'}</td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarBitacora('${b.id}')">Eliminar</button></td>
     </tr>`).join('')}
   </tbody></table>`;
+}
+
+async function forzarCierreTurno(id){
+  const b = bitacoras.find(x=>x.id===id);
+  if(!b) return;
+  if(!confirm(`¿Forzar el cierre del turno de ${nombreAgente(b.agenteId)}?`)) return;
+  try{
+    const salida = Date.now();
+    const duracionMin = Math.max(1, Math.round((salida - b.entradaTs) / 60000));
+    const h50 = duracionMin >= MINUTOS_H50;
+    await db.collection('bitacoras').doc(id).update({
+      salidaTs: salida, estadoTurno:'completado', duracionMin,
+      h50, validacionH50: h50 ? 'pendiente' : null
+    });
+    registrarAuditoria(`Forzó el cierre del turno de ${nombreAgente(b.agenteId)}`);
+    showToast('Turno cerrado');
+  }catch(e){ showToast('Error al cerrar el turno'); }
+}
+
+async function aprobarH50(id){
+  const b = bitacoras.find(x=>x.id===id);
+  try{
+    await db.collection('bitacoras').doc(id).update({ validacionH50: 'aprobado' });
+    registrarAuditoria(`Aprobó el H50 de ${b? nombreAgente(b.agenteId) : 'un turno'}`);
+    showToast('H50 aprobado');
+  }catch(e){ showToast('Error al aprobar'); }
 }
 
 function renderSancionesTabla(){
@@ -1603,10 +1705,14 @@ async function initListenersPolicia(){
     }
     const doc = snap.docs[0];
     const agente = { id: doc.id, ...doc.data() };
+    miAgenteId = agente.id;
     renderPoliciaInfo(agente);
+    document.getElementById('panel-control-turno').style.display = 'block';
 
     db.collection('bitacoras').where('agenteId','==', agente.id).onSnapshot(s=>{
       const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+      turnoActivo = lista.find(b=>b.estadoTurno==='activo') || null;
+      renderControlTurno();
       renderPoliciaBitacoras(lista);
     });
     db.collection('sanciones').where('agenteId','==', agente.id).onSnapshot(s=>{
@@ -1620,6 +1726,49 @@ async function initListenersPolicia(){
   }catch(e){
     showToast('Error al cargar tu expediente');
   }
+}
+
+function renderControlTurno(){
+  const el = document.getElementById('turno-estado');
+  if(!el) return;
+  if(turnoActivo){
+    const inicio = new Date(turnoActivo.entradaTs);
+    el.innerHTML = `
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <span class="pill activo">● En servicio</span>
+        <span class="mono" style="color:var(--paper-dim); font-size:12.5px;">Desde las ${inicio.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</span>
+        <button class="btn danger" onclick="finalizarTurno()">Finalizar turno</button>
+      </div>`;
+  }else{
+    el.innerHTML = `<button class="btn" onclick="iniciarTurno()">Iniciar turno</button>`;
+  }
+}
+
+async function iniciarTurno(){
+  if(!miAgenteId) return;
+  try{
+    await db.collection('bitacoras').doc(uid()).set({
+      agenteId: miAgenteId, tipo:'Servicio regular', fecha: fechaHoyISO(),
+      desc: 'Turno registrado por el propio oficial',
+      entradaTs: Date.now(), salidaTs: null, estadoTurno:'activo',
+      creado: Date.now()
+    });
+    showToast('Turno iniciado');
+  }catch(e){ showToast('Error al iniciar el turno'); }
+}
+
+async function finalizarTurno(){
+  if(!turnoActivo) return;
+  try{
+    const salida = Date.now();
+    const duracionMin = Math.max(1, Math.round((salida - turnoActivo.entradaTs) / 60000));
+    const h50 = duracionMin >= MINUTOS_H50;
+    await db.collection('bitacoras').doc(turnoActivo.id).update({
+      salidaTs: salida, estadoTurno:'completado', duracionMin,
+      h50, validacionH50: h50 ? 'pendiente' : null
+    });
+    showToast(`Turno finalizado (${duracionMin} min)${h50? ' — queda pendiente de validación H50':''}`);
+  }catch(e){ showToast('Error al finalizar el turno'); }
 }
 
 function renderPoliciaInfo(agente){
@@ -1637,15 +1786,23 @@ function renderPoliciaInfo(agente){
     </div>` : ''}`;
 }
 
+function fmtHoraSimple(ts){
+  if(!ts) return '—';
+  return new Date(ts).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+}
+
 function renderPoliciaBitacoras(lista){
   const el = document.getElementById('policia-bitacoras');
   el.innerHTML = lista.length ? `<table><thead><tr>
-    <th>Fecha</th><th>Tipo</th><th>Descripción</th>
+    <th>Fecha</th><th>Tipo</th><th>Entrada</th><th>Salida</th><th>Duración</th><th>Descripción</th>
   </tr></thead><tbody>
   ${lista.map(b=>`
     <tr>
       <td class="mono">${fmtDate(b.fecha)}</td>
       <td><span class="pill ${claseTipoBitacora(b.tipo)}">${b.tipo||'Servicio regular'}</span></td>
+      <td class="mono">${fmtHoraSimple(b.entradaTs)}</td>
+      <td class="mono">${b.estadoTurno==='activo' ? '<span class="pill activo">En servicio</span>' : fmtHoraSimple(b.salidaTs)}</td>
+      <td class="mono">${b.duracionMin!=null ? b.duracionMin+' min'+(b.h50? ' · H50':'') : '—'}</td>
       <td>${b.desc||'—'}</td>
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes bitácoras registradas.</div>';
