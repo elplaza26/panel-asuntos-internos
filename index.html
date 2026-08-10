@@ -1713,9 +1713,14 @@ async function sincronizarRolDiscord(discordUserId, rangoAnterior, rangoNuevo){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ discordUserId, rolAnteriorId, rolNuevoId })
     });
-    return await resp.json();
+    const texto = await resp.text();
+    try{
+      return JSON.parse(texto);
+    }catch(e){
+      return { omitido:true, razon:`Respuesta inesperada del servidor (código ${resp.status}). Es probable que falte subir api/discord-role-update.js a GitHub. Detalle: ${texto.slice(0,150)}` };
+    }
   }catch(e){
-    return { omitido:true, razon:'Error de conexión al sincronizar con Discord.' };
+    return { omitido:true, razon:'Error de conexión al sincronizar con Discord: ' + String(e) };
   }
 }
 
