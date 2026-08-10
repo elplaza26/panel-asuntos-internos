@@ -16,14 +16,15 @@ export default async function handler(req, res) {
 
   const payload = {
     embeds: [{
-      title: '📋 Registro de Bitácoras',
+      title: '🛡️ DAI Rebelión — Marcaje de Servicio',
       description:
-        'Para garantizar el correcto control de horas y actividad del personal, es obligatorio registrar tu servicio cada vez que entres o salgas de patrulla.\n\n' +
-        '**Instrucciones:**\n' +
-        '1. Haz clic en **Marcar Entrada** al iniciar tu turno.\n' +
-        '2. Al finalizar, haz clic en **Marcar Salida**.\n' +
-        '3. Las horas quedan guardadas automáticamente en el panel web.',
-      color: 3447003,
+        'Todo oficial activo debe fichar su entrada y salida en cada turno de patrullaje. Esto alimenta directamente tu expediente en el panel de Asuntos Internos.\n\n' +
+        '**Cómo usarlo:**\n' +
+        '🟢 Presiona **Marcar Entrada** al comenzar tu servicio.\n' +
+        '🔴 Presiona **Marcar Salida** al terminar.\n' +
+        '📊 Tus horas y tu progreso quedan guardados solos, sin que tengas que avisarle a nadie.',
+      color: 15105570,
+      footer: { text: 'DAI Rebelión · Sistema de control de personal' },
     }],
     components: [{
       type: 1,
