@@ -1433,6 +1433,26 @@ function renderBitacorasTabla(){
   </tbody></table>`;
 }
 
+async function publicarPanelDiscord(){
+  const channelId = document.getElementById('discord-canal-id').value.trim();
+  if(!channelId){ showToast('Escribe el ID del canal'); return; }
+  try{
+    const resp = await fetch('/api/discord-post-panel', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ channelId })
+    });
+    const data = await resp.json();
+    if(data.ok){
+      registrarAuditoria('Publicó el panel de Marcar Entrada/Salida en Discord');
+      showToast('Mensaje publicado en Discord');
+    }else{
+      showToast('Error: ' + (data.error || 'no se pudo publicar'));
+      console.error(data);
+    }
+  }catch(e){ showToast('Error de conexión al publicar en Discord'); }
+}
+
 async function forzarCierreTurno(id){
   const b = bitacoras.find(x=>x.id===id);
   if(!b) return;
