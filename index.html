@@ -579,9 +579,9 @@
           <div class="field">
             <label>Gravedad</label>
             <select id="sa-gravedad">
-              <option value="leve">Leve</option>
-              <option value="grave">Grave</option>
-              <option value="baja">Baja del cuerpo</option>
+              <option value="leve">Warn (amonestación)</option>
+              <option value="grave">Strike</option>
+              <option value="baja">Expulsión (baja del cuerpo)</option>
             </select>
           </div>
           <div class="field"><label>Fecha</label><input id="sa-fecha" type="date"></div>
@@ -1458,6 +1458,13 @@ function chipsRolesExtra(rolesExtra){
   }</div>`;
 }
 
+function etiquetaGravedad(g){
+  if(g==='leve') return 'Warn';
+  if(g==='grave') return 'Strike';
+  if(g==='baja') return 'Expulsión';
+  return g||'—';
+}
+
 function iconoRango(rango){
   const r = (rango||'').toUpperCase();
   if(r.includes('DIRECTOR') || r.includes('JEFE DEPARTAMENTO') || r.includes('JEFE DAI') || r.includes('SUB JEFE') || r.includes('DEV.') || r.includes('STAFF')) return '⭐';
@@ -1641,7 +1648,7 @@ function renderSancionesTabla(){
     <tr>
       <td class="mono">${fmtDate(s.fecha)}</td>
       <td>${nombreAgente(s.agenteId)}</td>
-      <td><span class="pill ${s.gravedad}">${s.gravedad}</span></td>
+      <td><span class="pill ${s.gravedad}">${etiquetaGravedad(s.gravedad)}</span></td>
       <td>${s.motivo}</td>
       <td>${s.evidencia ? `<a class="evidence-link" href="${s.evidencia}" target="_blank" rel="noopener">Ver evidencia →</a>` : '—'}</td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarSancion('${s.id}')">Eliminar</button></td>
@@ -1752,7 +1759,7 @@ function renderPanel(){
   const ultimasS = saFilt.slice(0,5);
   document.getElementById('panel-ultimas-sanciones').innerHTML = ultimasS.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Gravedad</th><th>Motivo</th></tr></thead><tbody>
-    ${ultimasS.map(s=>`<tr><td class="mono">${fmtDate(s.fecha)}</td><td>${nombreAgente(s.agenteId)}</td><td><span class="pill ${s.gravedad}">${s.gravedad}</span></td><td>${s.motivo}</td></tr>`).join('')}
+    ${ultimasS.map(s=>`<tr><td class="mono">${fmtDate(s.fecha)}</td><td>${nombreAgente(s.agenteId)}</td><td><span class="pill ${s.gravedad}">${etiquetaGravedad(s.gravedad)}</span></td><td>${s.motivo}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin sanciones aún.</div>';
 }
 
@@ -1989,7 +1996,7 @@ function renderPoliciaSanciones(lista){
   ${lista.map(s=>`
     <tr>
       <td class="mono">${fmtDate(s.fecha)}</td>
-      <td><span class="pill ${s.gravedad}">${s.gravedad}</span></td>
+      <td><span class="pill ${s.gravedad}">${etiquetaGravedad(s.gravedad)}</span></td>
       <td>${s.motivo}</td>
       <td>${s.evidencia ? `<a class="evidence-link" href="${s.evidencia}" target="_blank" rel="noopener">Ver →</a>` : '—'}</td>
     </tr>`).join('')}
