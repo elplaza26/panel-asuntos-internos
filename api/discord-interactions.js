@@ -146,6 +146,28 @@ async function cerrarBitacora(turno) {
   return duracionMin;
 }
 
+async function crearAgenteDesdeDiscord({ nombre, nombreOOC, placa, aprobadoPor, discordId }){
+  const id = placa ? ('placa-'+placa) : ('nombre-'+crypto.randomBytes(6).toString('hex'));
+  const now = Date.now();
+  const fields = {
+    placa: fsValue(placa || ''),
+    nombre: fsValue(nombre),
+    nombreOOC: fsValue(nombreOOC || ''),
+    discord: fsValue(discordId),
+    rango: fsValue('Cadete'),
+    subdivision: fsValue(''),
+    departamento: fsValue(''),
+    estado: fsValue('pendiente'),
+    notas: fsValue(aprobadoPor ? `Ingreso vía Discord — aprobado por: ${aprobadoPor}` : 'Ingreso vía Discord'),
+    creado: fsValue(now),
+  };
+  await fetch(`${FIRESTORE_BASE}/agentes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+}
+
 export default async function handler(req, res) {
   const signature = req.headers['x-signature-ed25519'];
   const timestamp = req.headers['x-signature-timestamp'];
@@ -169,6 +191,24 @@ export default async function handler(req, res) {
   if (interaction.type === 3) {
     const customId = interaction.data.custom_id;
     const discordUserId = interaction.member?.user?.id || interaction.user?.id;
+
+    // Botón "Postularme al cuerpo" — no requiere estar registrado todavía
+    if (customId === 'postularme') {
+      res.status(200).json({
+        type: 9,
+        data: {
+          custom_id: 'form_postulacion',
+          title: 'Registro de Nuevo Oficial',
+          components: [
+            { type: 1, components: [{ type: 4, custom_id: 'nombre_ic', label: 'Nombre del personaje (IC)', style: 1, required: true, max_length: 80 }] },
+            { type: 1, components: [{ type: 4, custom_id: 'nombre_ooc', label: 'Tu nombre o usuario (OOC)', style: 1, required: true, max_length: 80 }] },
+            { type: 1, components: [{ type: 4, custom_id: 'placa', label: 'Número de placa (si ya lo tienes)', style: 1, required: false, max_length: 10 }] },
+            { type: 1, components: [{ type: 4, custom_id: 'aprobado_por', label: 'Reclutador que autorizó tu ingreso', style: 1, required: true, max_length: 80 }] },
+          ],
+        },
+      });
+      return;
+    }
 
     try {
       const agente = await buscarAgentePorDiscord(discordUserId);
@@ -206,6 +246,42 @@ export default async function handler(req, res) {
     } catch (e) {
       res.status(200).json({ type: 4, data: { content: 'Ocurrió un error al procesar tu solicitud. Intenta de nuevo.', flags: 64 } });
     }
+    return;
+  }
+
+  // Envío de un formulario (modal)
+  if (interaction.type === 5) {
+    const customId = interaction.data.custom_id;
+
+    if (customId === 'form_postulacion') {
+      const discordUserId = interaction.member?.user?.id || interaction.user?.id;
+      const valores = {};
+      interaction.data.components.forEach((fila) => {
+        const campo = fila.components[0];
+        valores[campo.custom_id] = campo.value;
+      });
+
+      try {
+        const yaExiste = await buscarAgentePorDiscord(discordUserId);
+        if (yaExiste) {
+          res.status(200).json({ type: 4, data: { content: `⚠️ Ya existe un expediente asociado a tu cuenta (${yaExiste.nombre}). Contacta a Asuntos Internos si necesitas corregir algo.`, flags: 64 } });
+          return;
+        }
+        await crearAgenteDesdeDiscord({
+          nombre: valores.nombre_ic,
+          nombreOOC: valores.nombre_ooc,
+          placa: valores.placa,
+          aprobadoPor: valores.aprobado_por,
+          discordId: discordUserId,
+        });
+        res.status(200).json({ type: 4, data: { content: `✅ ¡Listo! Tu solicitud quedó registrada y **pendiente de aprobación** por el DAI. En cuanto te acepten, se te asignará tu rol automáticamente.`, flags: 64 } });
+      } catch (e) {
+        res.status(200).json({ type: 4, data: { content: 'Ocurrió un error al registrar tu ingreso. Avisa a Asuntos Internos.', flags: 64 } });
+      }
+      return;
+    }
+
+    res.status(200).json({ type: 4, data: { content: 'Formulario no reconocido.', flags: 64 } });
     return;
   }
 
