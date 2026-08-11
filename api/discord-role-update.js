@@ -10,8 +10,8 @@ export default async function handler(req, res) {
   }
   const { discordUserId, rolAnteriorId, rolNuevoId } = body || {};
 
-  if (!discordUserId || !rolNuevoId) {
-    res.status(400).json({ error: 'Faltan datos (discordUserId o rolNuevoId)' });
+  if (!discordUserId || (!rolAnteriorId && !rolNuevoId)) {
+    res.status(400).json({ error: 'Faltan datos (discordUserId y al menos un rol a agregar o quitar)' });
     return;
   }
 
@@ -22,16 +22,18 @@ export default async function handler(req, res) {
   const resultado = { agregado: false, quitado: false, errores: [] };
 
   try {
-    // Agregar el nuevo rol
-    const addRes = await fetch(
-      `https://discord.com/api/guilds/${guildId}/members/${discordUserId}/roles/${rolNuevoId}`,
-      { method: 'PUT', headers }
-    );
-    if (addRes.ok) {
-      resultado.agregado = true;
-    } else {
-      const errText = await addRes.text();
-      resultado.errores.push(`No se pudo agregar el rol nuevo (código ${addRes.status}): ${errText}`);
+    // Agregar el nuevo rol, si se pidió
+    if (rolNuevoId) {
+      const addRes = await fetch(
+        `https://discord.com/api/guilds/${guildId}/members/${discordUserId}/roles/${rolNuevoId}`,
+        { method: 'PUT', headers }
+      );
+      if (addRes.ok) {
+        resultado.agregado = true;
+      } else {
+        const errText = await addRes.text();
+        resultado.errores.push(`No se pudo agregar el rol nuevo (código ${addRes.status}): ${errText}`);
+      }
     }
 
     // Quitar el rol anterior, si aplica y es distinto del nuevo
