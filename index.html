@@ -1432,20 +1432,21 @@ async function addSancion(){
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!motivo){ showToast('Describe el motivo'); return; }
   try{
+    // Se calcula ANTES de guardar, usando lo que ya existía — así no se cuenta la nueva sanción dos veces
+    const agente = agentes.find(a=>a.id===agenteId);
+    const propias = sanciones.filter(s=>s.agenteId===agenteId);
+    const warns = Math.min(propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0), 3);
+    const strikes = Math.min(propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0), 3);
+    const nivelActual = gravedad === 'leve' ? warns : strikes;
+    const nivelAnterior = nivelActual > 1 ? nivelActual - 1 : null;
+
     await db.collection('sanciones').doc(uid()).set({ agenteId, gravedad, fecha, evidencia, motivo, creado: Date.now() });
     registrarAuditoria(`Aplicó una sanción (${gravedad}) a ${nombreAgente(agenteId)}`);
     document.getElementById('sa-motivo').value='';
     document.getElementById('sa-evidencia').value='';
     showToast('Sanción aplicada');
 
-    const agente = agentes.find(a=>a.id===agenteId);
-    const propias = sanciones.filter(s=>s.agenteId===agenteId);
-    const warns = Math.min(propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0), 3);
-    const strikes = Math.min(propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0), 3);
-
     // Asignar automáticamente el rol de Discord correspondiente al nivel (Warn/Strike/Expulsión), si está configurado
-    const nivelActual = gravedad === 'leve' ? warns : strikes;
-    const nivelAnterior = nivelActual > 1 ? nivelActual - 1 : null;
     const resultadoRol = await asignarRolSancion(agente?.discord, gravedad, nivelActual, nivelAnterior);
     if(!resultadoRol.omitido && resultadoRol.errores && resultadoRol.errores.length){
       console.error('Error al asignar rol de sanción:', resultadoRol.errores);
@@ -1488,19 +1489,14 @@ async function eliminarSancion(id){
   const s = sanciones.find(x=>x.id===id);
   if(!confirm(`¿Eliminar esta sanción${s? ' de '+nombreAgente(s.agenteId) : ''}? No se puede deshacer.`)) return;
   try{
-    await db.collection('sanciones').doc(id).delete();
-    if(s) registrarAuditoria(`Eliminó una sanción de ${nombreAgente(s.agenteId)}`);
-    showToast('Sanción eliminada');
-
+    // Se calcula ANTES de borrar, usando el estado actual (mientras la sanción todavía está en la lista)
+    let datosRol = null;
     if(s){
       const agente = agentes.find(a=>a.id===s.agenteId);
       if(agente?.discord){
         if(s.gravedad === 'baja'){
           if(rolesSancionPorTipo.expulsion){
-            fetch('/api/discord-role-update', {
-              method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ discordUserId: agente.discord, rolAnteriorId: rolesSancionPorTipo.expulsion })
-            }).catch(()=>{});
+            datosRol = { discordUserId: agente.discord, rolAnteriorId: rolesSancionPorTipo.expulsion };
           }
         }else{
           const esWarn = s.gravedad === 'leve';
@@ -1514,13 +1510,21 @@ async function eliminarSancion(id){
           const rolAnteriorId = rolesSancionPorTipo[prefijo + nivelAntes] || null;
           const rolNuevoId = nivelDespues > 0 ? (rolesSancionPorTipo[prefijo + nivelDespues] || null) : null;
           if(rolAnteriorId || rolNuevoId){
-            fetch('/api/discord-role-update', {
-              method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ discordUserId: agente.discord, rolAnteriorId, rolNuevoId })
-            }).catch(()=>{});
+            datosRol = { discordUserId: agente.discord, rolAnteriorId, rolNuevoId };
           }
         }
       }
+    }
+
+    await db.collection('sanciones').doc(id).delete();
+    if(s) registrarAuditoria(`Eliminó una sanción de ${nombreAgente(s.agenteId)}`);
+    showToast('Sanción eliminada');
+
+    if(datosRol){
+      fetch('/api/discord-role-update', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(datosRol)
+      }).catch(()=>{});
     }
   }
   catch(e){ showToast('Error al eliminar'); }
