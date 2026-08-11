@@ -570,6 +570,23 @@
       </div>
 
       <div class="panel">
+        <h3>Roles de Discord por nivel de sanción</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
+          Warn y Strike suben de nivel (1 → 2 → 3) según cuántos lleve acumulados el agente. Al pasar de nivel, se le quita el rol del nivel anterior y se le pone el nuevo. Deja en blanco los niveles que no uses.
+        </p>
+        <div class="form-grid">
+          <div class="field"><label>Warn · Nivel 1</label><input id="rol-warn-1" placeholder="ID del rol"></div>
+          <div class="field"><label>Warn · Nivel 2</label><input id="rol-warn-2" placeholder="ID del rol"></div>
+          <div class="field"><label>Warn · Nivel 3</label><input id="rol-warn-3" placeholder="ID del rol"></div>
+          <div class="field"><label>Strike · Nivel 1</label><input id="rol-strike-1" placeholder="ID del rol"></div>
+          <div class="field"><label>Strike · Nivel 2</label><input id="rol-strike-2" placeholder="ID del rol"></div>
+          <div class="field"><label>Strike · Nivel 3</label><input id="rol-strike-3" placeholder="ID del rol"></div>
+          <div class="field"><label>Rol de Expulsión</label><input id="rol-expulsion" placeholder="ID del rol"></div>
+          <div class="field"><button class="btn secondary" onclick="guardarRolesSancion()">Guardar roles</button></div>
+        </div>
+      </div>
+
+      <div class="panel">
         <h3>Aplicar sanción</h3>
         <div class="form-grid">
           <div class="field">
@@ -905,6 +922,7 @@ let bonos = [];
 let historialRangos = [];
 let canalStrikesId = '';
 let canalWarningsId = '';
+let rolesSancionPorTipo = {};
 let requisitosAscenso = {};
 let rolesDiscordPorRango = {};
 
@@ -1009,6 +1027,19 @@ function initListeners(){
     const inputWarnings = document.getElementById('canal-warnings-id');
     if(inputStrikes && !inputStrikes.value) inputStrikes.value = canalStrikesId;
     if(inputWarnings && !inputWarnings.value) inputWarnings.value = canalWarningsId;
+  }, ()=>{});
+
+  db.collection('config').doc('rolesSancion').onSnapshot(doc=>{
+    rolesSancionPorTipo = doc.exists ? (doc.data().roles || {}) : {};
+    const mapa = {
+      warn1:'rol-warn-1', warn2:'rol-warn-2', warn3:'rol-warn-3',
+      strike1:'rol-strike-1', strike2:'rol-strike-2', strike3:'rol-strike-3',
+      expulsion:'rol-expulsion'
+    };
+    Object.entries(mapa).forEach(([clave, idCampo])=>{
+      const inp = document.getElementById(idCampo);
+      if(inp && !inp.value) inp.value = rolesSancionPorTipo[clave] || '';
+    });
   }, ()=>{});
 }
 
@@ -1348,6 +1379,50 @@ async function guardarCanalSanciones(){
   }catch(e){ showToast('Error al guardar los canales'); }
 }
 
+async function guardarRolesSancion(){
+  const roles = {
+    warn1: document.getElementById('rol-warn-1').value.trim(),
+    warn2: document.getElementById('rol-warn-2').value.trim(),
+    warn3: document.getElementById('rol-warn-3').value.trim(),
+    strike1: document.getElementById('rol-strike-1').value.trim(),
+    strike2: document.getElementById('rol-strike-2').value.trim(),
+    strike3: document.getElementById('rol-strike-3').value.trim(),
+    expulsion: document.getElementById('rol-expulsion').value.trim(),
+  };
+  try{
+    await db.collection('config').doc('rolesSancion').set({ roles });
+    registrarAuditoria('Configuró los roles de Discord por nivel de sanción');
+    showToast('Roles guardados');
+  }catch(e){ showToast('Error al guardar los roles'); }
+}
+
+async function asignarRolSancion(discordUserId, gravedad, nivelActual, nivelAnterior){
+  if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
+
+  let rolNuevoId, rolAnteriorId = null;
+  if(gravedad === 'baja'){
+    rolNuevoId = rolesSancionPorTipo.expulsion;
+  }else{
+    const prefijo = gravedad === 'leve' ? 'warn' : 'strike';
+    rolNuevoId = rolesSancionPorTipo[prefijo + nivelActual];
+    if(nivelAnterior) rolAnteriorId = rolesSancionPorTipo[prefijo + nivelAnterior];
+  }
+  if(!rolNuevoId) return { omitido:true, razon:`No hay rol de Discord configurado para ese nivel de "${etiquetaGravedad(gravedad)}".` };
+
+  try{
+    const resp = await fetch('/api/discord-role-update', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ discordUserId, rolAnteriorId, rolNuevoId })
+    });
+    const texto = await resp.text();
+    try{ return JSON.parse(texto); }
+    catch(e){ return { omitido:true, razon:`Respuesta inesperada (código ${resp.status}).` }; }
+  }catch(e){
+    return { omitido:true, razon:'Error de conexión al asignar el rol.' };
+  }
+}
+
 async function addSancion(){
   const agenteId = document.getElementById('sa-agente').value;
   const gravedad = document.getElementById('sa-gravedad').value;
@@ -1363,25 +1438,48 @@ async function addSancion(){
     document.getElementById('sa-evidencia').value='';
     showToast('Sanción aplicada');
 
+    const agente = agentes.find(a=>a.id===agenteId);
+    const propias = sanciones.filter(s=>s.agenteId===agenteId);
+    const warns = Math.min(propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0), 3);
+    const strikes = Math.min(propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0), 3);
+
+    // Asignar automáticamente el rol de Discord correspondiente al nivel (Warn/Strike/Expulsión), si está configurado
+    const nivelActual = gravedad === 'leve' ? warns : strikes;
+    const nivelAnterior = nivelActual > 1 ? nivelActual - 1 : null;
+    const resultadoRol = await asignarRolSancion(agente?.discord, gravedad, nivelActual, nivelAnterior);
+    if(!resultadoRol.omitido && resultadoRol.errores && resultadoRol.errores.length){
+      console.error('Error al asignar rol de sanción:', resultadoRol.errores);
+    }
+
     const canalDestino = gravedad === 'leve' ? canalWarningsId : canalStrikesId;
     if(canalDestino){
-      const agente = agentes.find(a=>a.id===agenteId);
-      const propias = sanciones.filter(s=>s.agenteId===agenteId);
-      const warns = propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0);
-      const strikes = propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0);
-      fetch('/api/discord-post-sancion', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          channelId: canalDestino,
-          discordUserId: agente?.discord || '',
-          autorizadoPorId: usuarioActual?.id || '',
-          autorizadoPorNombre: usuarioActual?.global_name || '',
-          agenteNombre: agente?.nombre || nombreAgente(agenteId),
-          agentePlaca: agente?.placa || '',
-          motivo, gravedad, warns, strikes,
-        })
-      }).catch(()=>{});
+      try{
+        const resp = await fetch('/api/discord-post-sancion', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            channelId: canalDestino,
+            discordUserId: agente?.discord || '',
+            autorizadoPorId: usuarioActual?.id || '',
+            autorizadoPorNombre: usuarioActual?.global_name || '',
+            agenteNombre: agente?.nombre || nombreAgente(agenteId),
+            agentePlaca: agente?.placa || '',
+            motivo, gravedad, warns, strikes,
+          })
+        });
+        const texto = await resp.text();
+        let data;
+        try{ data = JSON.parse(texto); }catch(e){ data = null; }
+        if(!data || !data.ok){
+          console.error('Error al avisar en Discord:', texto);
+          showToast(`Sanción guardada, pero Discord dio error (código ${resp.status}) — revisa la consola`);
+        }
+      }catch(e){
+        console.error(e);
+        showToast('Sanción guardada, pero hubo un error de conexión con Discord');
+      }
+    }else{
+      showToast('Sanción guardada (no hay canal de Discord configurado para este tipo de sanción)');
     }
   }catch(e){ showToast('Error al guardar la sanción'); }
 }
@@ -1392,6 +1490,38 @@ async function eliminarSancion(id){
   try{
     await db.collection('sanciones').doc(id).delete();
     if(s) registrarAuditoria(`Eliminó una sanción de ${nombreAgente(s.agenteId)}`);
+    showToast('Sanción eliminada');
+
+    if(s){
+      const agente = agentes.find(a=>a.id===s.agenteId);
+      if(agente?.discord){
+        if(s.gravedad === 'baja'){
+          if(rolesSancionPorTipo.expulsion){
+            fetch('/api/discord-role-update', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ discordUserId: agente.discord, rolAnteriorId: rolesSancionPorTipo.expulsion })
+            }).catch(()=>{});
+          }
+        }else{
+          const esWarn = s.gravedad === 'leve';
+          const restantesDelTipo = sanciones.filter(x =>
+            x.agenteId===s.agenteId && x.id!==id &&
+            (esWarn ? x.gravedad==='leve' : (x.gravedad==='grave' || x.gravedad==='baja'))
+          ).length;
+          const nivelAntes = Math.min(restantesDelTipo + 1, 3);
+          const nivelDespues = Math.min(restantesDelTipo, 3);
+          const prefijo = esWarn ? 'warn' : 'strike';
+          const rolAnteriorId = rolesSancionPorTipo[prefijo + nivelAntes] || null;
+          const rolNuevoId = nivelDespues > 0 ? (rolesSancionPorTipo[prefijo + nivelDespues] || null) : null;
+          if(rolAnteriorId || rolNuevoId){
+            fetch('/api/discord-role-update', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ discordUserId: agente.discord, rolAnteriorId, rolNuevoId })
+            }).catch(()=>{});
+          }
+        }
+      }
+    }
   }
   catch(e){ showToast('Error al eliminar'); }
 }
