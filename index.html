@@ -558,6 +558,18 @@
       </header>
 
       <div class="panel">
+        <h3>Canales de avisos en Discord</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
+          Cada vez que registres una sanción, se publica un aviso automático — en el canal de <strong>Strikes</strong> si es "grave" o "baja del cuerpo", y en el canal de <strong>Warnings</strong> si es "leve". Se configuran una sola vez.
+        </p>
+        <div class="form-grid">
+          <div class="field"><label>ID del canal de Strikes</label><input id="canal-strikes-id" placeholder="Ej. 1234567890123456789"></div>
+          <div class="field"><label>ID del canal de Warnings</label><input id="canal-warnings-id" placeholder="Ej. 1234567890123456789"></div>
+          <div class="field"><button class="btn secondary" onclick="guardarCanalSanciones()">Guardar canales</button></div>
+        </div>
+      </div>
+
+      <div class="panel">
         <h3>Aplicar sanción</h3>
         <div class="form-grid">
           <div class="field">
@@ -891,6 +903,8 @@ let bitacoras = [];
 let sanciones = [];
 let bonos = [];
 let historialRangos = [];
+let canalStrikesId = '';
+let canalWarningsId = '';
 let requisitosAscenso = {};
 let rolesDiscordPorRango = {};
 
@@ -985,6 +999,16 @@ function initListeners(){
   db.collection('config').doc('rolesDiscord').onSnapshot(doc=>{
     rolesDiscordPorRango = doc.exists ? (doc.data().roles || {}) : {};
     renderRolesDiscordForm();
+  }, ()=>{});
+
+  db.collection('config').doc('canalSanciones').onSnapshot(doc=>{
+    const datos = doc.exists ? doc.data() : {};
+    canalStrikesId = datos.canalStrikes || '';
+    canalWarningsId = datos.canalWarnings || '';
+    const inputStrikes = document.getElementById('canal-strikes-id');
+    const inputWarnings = document.getElementById('canal-warnings-id');
+    if(inputStrikes && !inputStrikes.value) inputStrikes.value = canalStrikesId;
+    if(inputWarnings && !inputWarnings.value) inputWarnings.value = canalWarningsId;
   }, ()=>{});
 }
 
@@ -1314,6 +1338,16 @@ async function eliminarBono(id){
   catch(e){ showToast('Error al eliminar'); }
 }
 
+async function guardarCanalSanciones(){
+  const canalStrikes = document.getElementById('canal-strikes-id').value.trim();
+  const canalWarnings = document.getElementById('canal-warnings-id').value.trim();
+  try{
+    await db.collection('config').doc('canalSanciones').set({ canalStrikes, canalWarnings });
+    registrarAuditoria('Configuró los canales de Strikes/Warnings en Discord');
+    showToast('Canales guardados');
+  }catch(e){ showToast('Error al guardar los canales'); }
+}
+
 async function addSancion(){
   const agenteId = document.getElementById('sa-agente').value;
   const gravedad = document.getElementById('sa-gravedad').value;
@@ -1328,6 +1362,27 @@ async function addSancion(){
     document.getElementById('sa-motivo').value='';
     document.getElementById('sa-evidencia').value='';
     showToast('Sanción aplicada');
+
+    const canalDestino = gravedad === 'leve' ? canalWarningsId : canalStrikesId;
+    if(canalDestino){
+      const agente = agentes.find(a=>a.id===agenteId);
+      const propias = sanciones.filter(s=>s.agenteId===agenteId);
+      const warns = propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0);
+      const strikes = propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0);
+      fetch('/api/discord-post-sancion', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          channelId: canalDestino,
+          discordUserId: agente?.discord || '',
+          autorizadoPorId: usuarioActual?.id || '',
+          autorizadoPorNombre: usuarioActual?.global_name || '',
+          agenteNombre: agente?.nombre || nombreAgente(agenteId),
+          agentePlaca: agente?.placa || '',
+          motivo, gravedad, warns, strikes,
+        })
+      }).catch(()=>{});
+    }
   }catch(e){ showToast('Error al guardar la sanción'); }
 }
 
@@ -1512,7 +1567,14 @@ async function publicarSolicitudDiscord(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ channelId })
     });
-    const data = await resp.json();
+    const texto = await resp.text();
+    let data;
+    try{ data = JSON.parse(texto); }
+    catch(e){
+      showToast(`Respuesta inesperada (código ${resp.status}). Probablemente falte subir api/discord-post-solicitud.js a GitHub.`);
+      console.error(texto);
+      return;
+    }
     if(data.ok){
       registrarAuditoria('Publicó el botón de Solicitud de rango en Discord');
       showToast('Mensaje publicado en Discord');
