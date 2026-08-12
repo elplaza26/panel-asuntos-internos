@@ -18,19 +18,18 @@ export default async function handler(req, res) {
     embeds: [{
       title: '📝 Solicitud de Ingreso al Cuerpo',
       description:
-        'Este formulario es exclusivo para aspirantes **ya preseleccionados** por Asuntos Internos — si todavía no pasaste ese filtro, el botón no te va a dejar continuar.\n\n' +
         '**Pasos a seguir:**\n' +
-        '1. Presiona **Postularme al cuerpo**.\n' +
+        '1. Presiona **Solicitar rango** (solo cuando estés aprobado).\n' +
         '2. Completa tus datos en el formulario.\n' +
         '3. Tu solicitud queda pendiente de revisión.\n' +
-        '4. En cuanto te aprueben, tu rol se activa automáticamente.',
+        '4. En cuanto te aprueben, ya eres parte del cuerpo policial.',
       color: 3066993,
       footer: { text: 'DAI Rebelión · Sistema de reclutamiento' },
     }],
     components: [{
       type: 1,
       components: [
-        { type: 2, style: 1, label: 'Postularme al cuerpo', custom_id: 'postularme', emoji: { name: '📝' } },
+        { type: 2, style: 1, label: 'Solicitar rango', custom_id: 'postularme', emoji: { name: '📝' } },
       ],
     }],
   };
