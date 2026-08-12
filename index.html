@@ -1278,7 +1278,16 @@ function initListeners(){
   }, ()=>{});
 
   db.collection('config').doc('requisitosAscenso').onSnapshot(doc=>{
-    requisitosAscenso = doc.exists ? (doc.data().dias || {}) : {};
+    const datos = doc.exists ? doc.data() : {};
+    const crudo = datos.requisitos || datos.dias || {}; // "dias" es el campo viejo (solo números sueltos)
+    requisitosAscenso = {};
+    Object.entries(crudo).forEach(([rango, val])=>{
+      if(typeof val === 'number'){
+        requisitosAscenso[rango] = { dias: val, denuncias: 0, evidencias: 0 };
+      }else{
+        requisitosAscenso[rango] = { dias: val.dias||0, denuncias: val.denuncias||0, evidencias: val.evidencias||0 };
+      }
+    });
     renderRequisitosForm();
     renderAscensos();
   }, ()=>{});
@@ -3036,11 +3045,28 @@ function bitacorasDesdeAscenso(agente){
 function renderRequisitosForm(){
   const el = document.getElementById('form-requisitos');
   if(!el) return;
-  el.innerHTML = RANGOS_ORDEN.map(r=>`
-    <div class="field">
-      <label>${iconoRango(r)} ${r}</label>
-      <input type="number" min="0" class="req-rango-input" data-rango="${r}" value="${requisitosAscenso[r] || 0}">
-    </div>`).join('');
+  el.style.gridTemplateColumns = 'repeat(4, 1fr)';
+  el.innerHTML = RANGOS_ORDEN.map(r=>{
+    const req = requisitosAscenso[r] || { dias:0, denuncias:0, evidencias:0 };
+    return `
+    <div style="border:1px solid var(--navy-700); border-radius:6px; padding:10px; background:var(--navy-950);">
+      <label style="display:block; margin-bottom:8px; text-transform:none; font-size:12px; color:var(--paper);">${iconoRango(r)} ${r}</label>
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
+        <div>
+          <div style="font-size:9px; color:var(--paper-dim); margin-bottom:3px;">DÍAS</div>
+          <input type="number" min="0" class="req-dias-input" data-rango="${r}" value="${req.dias||0}" style="width:100%; background:var(--navy-900); border:1px solid var(--navy-700); color:var(--paper); padding:6px; border-radius:4px; font-size:12px;">
+        </div>
+        <div>
+          <div style="font-size:9px; color:var(--paper-dim); margin-bottom:3px;">DENUNCIAS</div>
+          <input type="number" min="0" max="20" class="req-denuncias-input" data-rango="${r}" value="${req.denuncias||0}" style="width:100%; background:var(--navy-900); border:1px solid var(--navy-700); color:var(--paper); padding:6px; border-radius:4px; font-size:12px;">
+        </div>
+        <div>
+          <div style="font-size:9px; color:var(--paper-dim); margin-bottom:3px;">EVIDENCIAS</div>
+          <input type="number" min="0" max="20" class="req-evidencias-input" data-rango="${r}" value="${req.evidencias||0}" style="width:100%; background:var(--navy-900); border:1px solid var(--navy-700); color:var(--paper); padding:6px; border-radius:4px; font-size:12px;">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function guardarRequisitos(){
@@ -3048,15 +3074,16 @@ async function guardarRequisitos(){
     showToast('Solo Directiva puede modificar los requisitos de ascenso');
     return;
   }
-  const inputs = document.querySelectorAll('.req-rango-input');
-  const dias = {};
-  inputs.forEach(inp=>{
-    const v = parseInt(inp.value, 10) || 0;
-    if(v > 0) dias[inp.dataset.rango] = v;
+  const requisitos = {};
+  RANGOS_ORDEN.forEach(r=>{
+    const dias = parseInt(document.querySelector(`.req-dias-input[data-rango="${CSS.escape(r)}"]`)?.value, 10) || 0;
+    const denuncias = parseInt(document.querySelector(`.req-denuncias-input[data-rango="${CSS.escape(r)}"]`)?.value, 10) || 0;
+    const evidencias = parseInt(document.querySelector(`.req-evidencias-input[data-rango="${CSS.escape(r)}"]`)?.value, 10) || 0;
+    if(dias > 0 || denuncias > 0 || evidencias > 0) requisitos[r] = { dias, denuncias, evidencias };
   });
   try{
-    await db.collection('config').doc('requisitosAscenso').set({ dias });
-    registrarAuditoria('Actualizó los requisitos de días por rango');
+    await db.collection('config').doc('requisitosAscenso').set({ requisitos });
+    registrarAuditoria('Actualizó los requisitos de ascenso (días, denuncias y evidencias) por rango');
     showToast('Requisitos guardados');
   }catch(e){ showToast('Error al guardar los requisitos'); }
 }
@@ -3130,6 +3157,12 @@ async function sincronizarApodoDiscord(discordUserId, rango, nombre, placa){
   }
 }
 
+function contarValidasPorTipo(agente, tipo){
+  const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[agente.id]);
+  const lista = tipo === 'denuncias' ? denuncias : evidencias;
+  return lista.filter(e=>e.estado===true).length;
+}
+
 function renderAscensos(){
   const elElegibles = document.getElementById('tabla-elegibles');
   const elProgreso = document.getElementById('tabla-en-progreso');
@@ -3137,55 +3170,70 @@ function renderAscensos(){
 
   const activos = agentes.filter(a=>a.estado==='activo');
   const conDatos = activos.map(a=>{
-    const requisito = requisitosAscenso[a.rango] || 0;
+    const req = requisitosAscenso[a.rango] || { dias:0, denuncias:0, evidencias:0 };
     const dias = diasEnRango(a);
     const bitacorasMarcadas = bitacorasDesdeAscenso(a);
-    const denunciasVal = denunciasValidadas(a);
-    return { agente:a, requisito, dias, bitacorasMarcadas, denunciasVal };
-  }).filter(x => x.requisito > 0 && x.dias !== null);
+    const denunciasVal = contarValidasPorTipo(a, 'denuncias');
+    const evidenciasVal = contarValidasPorTipo(a, 'evidencias');
 
-  const elegibles = conDatos.filter(x=> x.dias >= x.requisito).sort((a,b)=> b.dias - a.dias);
-  const enProgreso = conDatos.filter(x=> x.dias < x.requisito).sort((a,b)=> b.dias - a.dias);
+    const diasOk = req.dias <= 0 || (dias !== null && dias >= req.dias);
+    const denunciasOk = req.denuncias <= 0 || denunciasVal >= req.denuncias;
+    const evidenciasOk = req.evidencias <= 0 || evidenciasVal >= req.evidencias;
+    const cumpleTodo = diasOk && denunciasOk && evidenciasOk;
+
+    // Progreso combinado, para ordenar/mostrar barra cuando aún no cumple
+    const partes = [];
+    if(req.dias > 0) partes.push(Math.min(1, (dias||0) / req.dias));
+    if(req.denuncias > 0) partes.push(Math.min(1, denunciasVal / req.denuncias));
+    if(req.evidencias > 0) partes.push(Math.min(1, evidenciasVal / req.evidencias));
+    const progreso = partes.length ? Math.round((partes.reduce((a,b)=>a+b,0) / partes.length) * 100) : 0;
+
+    return { agente:a, req, dias, bitacorasMarcadas, denunciasVal, evidenciasVal, diasOk, denunciasOk, evidenciasOk, cumpleTodo, progreso };
+  }).filter(x => (x.req.dias > 0 || x.req.denuncias > 0 || x.req.evidencias > 0) && x.dias !== null);
+
+  const elegibles = conDatos.filter(x=> x.cumpleTodo).sort((a,b)=> b.progreso - a.progreso);
+  const enProgreso = conDatos.filter(x=> !x.cumpleTodo).sort((a,b)=> b.progreso - a.progreso);
+
+  const celdaRequisito = (valor, requerido, ok, sufijo) => requerido > 0
+    ? `<span class="${ok? '' : ''}" style="color:${ok? '#8fbf92':'var(--paper-dim)'};">${ok?'✓ ':''}${valor}${sufijo}/${requerido}${sufijo}</span>`
+    : '<span style="color:var(--steel-600);">—</span>';
 
   elElegibles.innerHTML = elegibles.length ? `<table><thead><tr>
-    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Denuncias validadas</th><th>Requeridos</th><th></th>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días</th><th>Denuncias</th><th>Evidencias</th><th>Bitácoras</th><th></th>
   </tr></thead><tbody>
   ${elegibles.map(x=>`
     <tr>
       <td class="mono">${x.agente.placa||'—'}</td>
       <td>${x.agente.nombre}</td>
       <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
-      <td class="mono"><span class="pill activo">${x.dias}d</span></td>
+      <td class="mono">${celdaRequisito(x.dias, x.req.dias, x.diasOk, 'd')}</td>
+      <td class="mono">${celdaRequisito(x.denunciasVal, x.req.denuncias, x.denunciasOk, '')}</td>
+      <td class="mono">${celdaRequisito(x.evidenciasVal, x.req.evidencias, x.evidenciasOk, '')}</td>
       <td class="mono">${x.bitacorasMarcadas}</td>
-      <td class="mono">${x.denunciasVal}</td>
-      <td class="mono">${x.requisito}d</td>
       <td class="row-actions"><button class="btn" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Ascender</button></td>
     </tr>`).join('')}
-  </tbody></table>` : '<div class="empty">Nadie cumple los días requeridos todavía.</div>';
+  </tbody></table>` : '<div class="empty">Nadie cumple todos los requisitos todavía.</div>';
 
   elProgreso.innerHTML = enProgreso.length ? `<table><thead><tr>
-    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Denuncias validadas</th><th>Requeridos</th><th>Progreso</th><th></th>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días</th><th>Denuncias</th><th>Evidencias</th><th>Bitácoras</th><th>Progreso</th><th></th>
   </tr></thead><tbody>
-  ${enProgreso.map(x=>{
-    const pct = Math.min(100, Math.round((x.dias / x.requisito) * 100));
-    return `
+  ${enProgreso.map(x=>`
     <tr>
       <td class="mono">${x.agente.placa||'—'}</td>
       <td>${x.agente.nombre}</td>
       <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
-      <td class="mono">${x.dias}d</td>
+      <td class="mono">${celdaRequisito(x.dias, x.req.dias, x.diasOk, 'd')}</td>
+      <td class="mono">${celdaRequisito(x.denunciasVal, x.req.denuncias, x.denunciasOk, '')}</td>
+      <td class="mono">${celdaRequisito(x.evidenciasVal, x.req.evidencias, x.evidenciasOk, '')}</td>
       <td class="mono">${x.bitacorasMarcadas}</td>
-      <td class="mono">${x.denunciasVal}</td>
-      <td class="mono">${x.requisito}d</td>
       <td style="min-width:110px;">
         <div style="background:var(--navy-800); border:1px solid var(--navy-700); border-radius:20px; height:8px; overflow:hidden;">
-          <div style="width:${pct}%; height:100%; background:var(--brass-dim);"></div>
+          <div style="width:${x.progreso}%; height:100%; background:var(--brass-dim);"></div>
         </div>
-        <div class="mono" style="font-size:10.5px; color:var(--paper-dim); margin-top:3px;">${pct}%</div>
+        <div class="mono" style="font-size:10.5px; color:var(--paper-dim); margin-top:3px;">${x.progreso}%</div>
       </td>
       <td class="row-actions"><button class="btn secondary" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Adelantar</button></td>
-    </tr>`;
-  }).join('')}
+    </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No hay agentes con requisito configurado en progreso.</div>';
 }
 
