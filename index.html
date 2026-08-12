@@ -161,6 +161,7 @@
   .pill.activo{ background: rgba(79,122,82,0.15); color:#8fbf92; border:1px solid rgba(79,122,82,0.4); }
   .pill.sancionado{ background: rgba(179,57,44,0.15); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
   .pill.pendiente{ background: rgba(74,144,201,0.16); color:#8ec4ec; border:1px solid rgba(74,144,201,0.45); }
+  .pill.expulsado{ background: rgba(0,0,0,0.5); color:#ff6b5b; border:1px solid var(--red); font-weight:700; }
   .pill.leve{ background:rgba(74,144,201,0.16); color:#8ec4ec; border:1px solid rgba(74,144,201,0.45); }
   .pill.grave{ background:rgba(214,138,44,0.2); color:#f0b169; border:1px solid rgba(214,138,44,0.5); }
   .pill.baja{ background:rgba(179,57,44,0.32); color:#ff9d8a; border:1px solid var(--red); font-weight:700; }
@@ -1466,6 +1467,18 @@ async function importarExcel(){
 async function toggleEstadoAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
+  if(ag.estado === 'expulsado'){
+    if(!usuarioActual?.esDirectiva){
+      showToast('Solo Directiva puede reincorporar a un agente expulsado');
+      return;
+    }
+    if(!confirm(`${ag.nombre} está EXPULSADO. ¿Reincorporarlo como agente activo? Vas a tener que asignarle roles de Discord manualmente de nuevo.`)) return;
+    try{
+      await db.collection('agentes').doc(id).update({ estado: 'activo' });
+      registrarAuditoria(`Reincorporó a ${ag.nombre} tras una expulsión`);
+    }catch(e){ showToast('Error al actualizar'); }
+    return;
+  }
   const nuevoEstado = ag.estado === 'activo' ? 'sancionado' : 'activo';
   if(!confirm(`¿Cambiar el estado de ${ag.nombre} a "${nuevoEstado}"?`)) return;
   try{
@@ -1473,6 +1486,43 @@ async function toggleEstadoAgente(id){
     registrarAuditoria(`Cambió el estado de ${ag.nombre} a "${nuevoEstado}"`);
   }
   catch(e){ showToast('Error al actualizar'); }
+}
+
+async function expulsarAgente(id){
+  const ag = agentes.find(a=>a.id===id);
+  if(!ag) return;
+
+  // Si NO es Directiva, la expulsión queda pendiente de aprobación (misma regla que las sanciones)
+  if(!usuarioActual?.esDirectiva){
+    if(!confirm(`¿Enviar la expulsión de ${ag.nombre} a Directiva para su aprobación?`)) return;
+    try{
+      await db.collection('sancionesPendientes').doc(uid()).set({
+        agenteId: id, gravedad: 'baja', fecha: fechaHoyISO(), evidencia: '',
+        motivo: 'Solicitud de expulsión del cuerpo',
+        solicitadoPor: usuarioActual?.global_name || 'Desconocido',
+        creado: Date.now()
+      });
+      registrarAuditoria(`Solicitó la expulsión de ${ag.nombre} (pendiente de aprobación de Directiva)`);
+      showToast('Expulsión enviada a Directiva para su aprobación');
+    }catch(e){ showToast('Error al enviar la solicitud de expulsión'); }
+    return;
+  }
+
+  // Directiva: se aplica directo
+  if(!confirm(`¿Expulsar a ${ag.nombre} del cuerpo?\n\nSe le van a quitar TODOS sus roles de Discord y va a quedar únicamente con el rol de "Expulsado" — no va a poder ver ningún canal del servidor. Esta acción es fuerte, confírmala con cuidado.`)) return;
+  try{
+    await db.collection('agentes').doc(id).update({ estado: 'expulsado' });
+    registrarAuditoria(`Expulsó a ${ag.nombre} del cuerpo`);
+    const resultado = await expulsarDeDiscord(ag.discord);
+    if(resultado.omitido){
+      showToast(`${ag.nombre} expulsado en el panel (Discord no se actualizó: ${resultado.razon})`);
+    }else if(resultado.errores && resultado.errores.length){
+      showToast(`${ag.nombre} expulsado, pero hubo un problema quitando los roles en Discord`);
+      console.error(resultado.errores);
+    }else{
+      showToast(`${ag.nombre} expulsado — se le quitaron todos los roles de Discord`);
+    }
+  }catch(e){ showToast('Error al expulsar'); }
 }
 
 async function eliminarAgente(id){
@@ -1761,6 +1811,13 @@ async function aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, soli
   registrarAuditoria(`Aplicó una sanción (${gravedad}) a ${nombreAgente(agenteId)}${solicitadoPor? ' (solicitada por '+solicitadoPor+')':''}`);
   showToast('Sanción aplicada');
 
+  if(gravedad === 'baja'){
+    try{
+      await db.collection('agentes').doc(agenteId).update({ estado: 'expulsado' });
+      registrarAuditoria(`Marcó a ${nombreAgente(agenteId)} como Expulsado`);
+    }catch(e){ /* no bloquea el resto del flujo */ }
+  }
+
   let resultadoRol;
   if(gravedad === 'baja'){
     resultadoRol = await expulsarDeDiscord(agente?.discord);
@@ -1976,9 +2033,9 @@ function renderAgentesTabla(){
       <td>${iconoRango(a.rango)} ${a.rango||'—'}</td>
       <td><span class="tally">${countBitacoras(a.id)}</span></td>
       <td><span class="tally">${countSancionesActivas(a.id)}</span></td>
-      <td><span class="pill ${a.estado==='activo'?'activo':'sancionado'}" style="cursor:pointer" onclick="toggleEstadoAgente('${a.id}')">${a.estado}</span></td>
+      <td><span class="pill ${a.estado==='activo'?'activo':a.estado==='expulsado'?'expulsado':a.estado==='pendiente'?'pendiente':'sancionado'}" style="cursor:pointer" onclick="toggleEstadoAgente('${a.id}')" title="Clic para reactivar">${a.estado}</span></td>
       <td><button class="icon-btn" onclick="editarNota('${a.id}')" title="${a.notas? a.notas.replace(/"/g,'&quot;') : 'Sin notas'}">${a.notas? '📝' : '➕'}</button></td>
-      <td class="row-actions"><button class="icon-btn" onclick="editarAgente('${a.id}')" style="color:var(--brass);">Editar</button><button class="icon-btn" onclick="eliminarAgente('${a.id}')">Eliminar</button></td>
+      <td class="row-actions"><button class="icon-btn" onclick="editarAgente('${a.id}')" style="color:var(--brass);">Editar</button>${a.estado!=='expulsado' ? `<button class="icon-btn" onclick="expulsarAgente('${a.id}')" style="color:#ff6b5a; border-color:var(--red-dim);">Expulsar</button>` : ''}<button class="icon-btn" onclick="eliminarAgente('${a.id}')">Eliminar</button></td>
     </tr>`).join('')}
   </tbody></table>`;
 }
