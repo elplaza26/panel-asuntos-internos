@@ -1213,13 +1213,15 @@ function initListeners(){
 
   db.collection('denunciasChecklist').onSnapshot(snap=>{
     denunciasChecklists = {};
-    snap.docs.forEach(d=>{ denunciasChecklists[d.id] = d.data().checks || []; });
+    snap.docs.forEach(d=>{ denunciasChecklists[d.id] = d.data(); });
     renderDenunciasStats();
     renderAscensos();
     if(checklistAgenteActual && denunciasChecklists[checklistAgenteActual]){
-      checklistActual = denunciasChecklists[checklistAgenteActual].slice(0,20);
-      while(checklistActual.length < 20) checklistActual.push(false);
-      renderGridChecks();
+      const guardado = extraerListasChecklist(denunciasChecklists[checklistAgenteActual]);
+      checklistDenuncias = guardado.denuncias;
+      checklistEvidencias = guardado.evidencias;
+      renderGridChecks('denuncias');
+      renderGridChecks('evidencias');
     }
   }, ()=>showToast('Error de conexión con la base de datos'));
 
@@ -2007,6 +2009,19 @@ function normalizarLista(lista){
   return limpia;
 }
 
+function extraerListasChecklist(datos){
+  if(!datos) return { denuncias: normalizarLista([]), evidencias: normalizarLista([]) };
+  // Formato nuevo: ya viene separado en denuncias/evidencias
+  if(datos.denuncias || datos.evidencias){
+    return { denuncias: normalizarLista(datos.denuncias), evidencias: normalizarLista(datos.evidencias) };
+  }
+  // Formato viejo: un solo checklist combinado (campo "checks") — lo recuperamos como "Denuncias"
+  if(datos.checks){
+    return { denuncias: normalizarLista(datos.checks), evidencias: normalizarLista([]) };
+  }
+  return { denuncias: normalizarLista([]), evidencias: normalizarLista([]) };
+}
+
 function cargarChecklistDenuncias(){
   const agenteId = document.getElementById('de-agente-select').value;
   const panel = document.getElementById('panel-checklist-denuncias');
@@ -2014,9 +2029,9 @@ function cargarChecklistDenuncias(){
   checklistAgenteActual = agenteId;
   const agente = agentes.find(a=>a.id===agenteId);
   document.getElementById('de-nombre-agente').textContent = agente ? `${agente.placa? '#'+agente.placa+' — ':''}${agente.nombre}` : '';
-  const guardado = denunciasChecklists[agenteId] || {};
-  checklistDenuncias = normalizarLista(guardado.denuncias);
-  checklistEvidencias = normalizarLista(guardado.evidencias);
+  const guardado = extraerListasChecklist(denunciasChecklists[agenteId]);
+  checklistDenuncias = guardado.denuncias;
+  checklistEvidencias = guardado.evidencias;
   panel.style.display = 'block';
   renderGridChecks('denuncias');
   renderGridChecks('evidencias');
@@ -2092,21 +2107,15 @@ async function guardarChecklistDenuncias(){
 }
 
 function denunciasValidadas(agente){
-  const datos = denunciasChecklists[agente.id];
-  if(!datos) return 0;
-  const d = normalizarLista(datos.denuncias).filter(e=>e.estado===true).length;
-  const e = normalizarLista(datos.evidencias).filter(e=>e.estado===true).length;
-  return d + e;
+  const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[agente.id]);
+  return denuncias.filter(e=>e.estado===true).length + evidencias.filter(e=>e.estado===true).length;
 }
 
 function renderDenunciasStats(){
   const statTotal = document.getElementById('stat-denuncias-total');
   const statAgentes = document.getElementById('stat-denuncias-agentes');
   const statCompletos = document.getElementById('stat-denuncias-completos');
-  const entradas = Object.values(denunciasChecklists).map(datos => ({
-    denuncias: normalizarLista(datos.denuncias),
-    evidencias: normalizarLista(datos.evidencias),
-  }));
+  const entradas = Object.values(denunciasChecklists).map(datos => extraerListasChecklist(datos));
   const total = entradas.reduce((acc, x)=> acc + x.denuncias.filter(e=>e.estado===true).length + x.evidencias.filter(e=>e.estado===true).length, 0);
   const iniciados = entradas.filter(x =>
     x.denuncias.some(e=>e.estado!==null || (e.numero && e.numero.trim())) ||
@@ -2134,18 +2143,15 @@ function renderDenunciasStats(){
     }
     if(soloIniciados){
       lista = lista.filter(a => {
-        const datos = denunciasChecklists[a.id];
-        if(!datos) return false;
-        const d = normalizarLista(datos.denuncias);
-        const e = normalizarLista(datos.evidencias);
-        return d.some(x=>x.estado!==null || (x.numero && x.numero.trim())) || e.some(x=>x.estado!==null || (x.numero && x.numero.trim()));
+        const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[a.id]);
+        return denuncias.some(x=>x.estado!==null || (x.numero && x.numero.trim())) || evidencias.some(x=>x.estado!==null || (x.numero && x.numero.trim()));
       });
     }
 
     const opts = lista.sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}))
       .map(a=>{
-        const datos = denunciasChecklists[a.id];
-        const n = datos ? (normalizarLista(datos.denuncias).filter(e=>e.estado===true).length + normalizarLista(datos.evidencias).filter(e=>e.estado===true).length) : 0;
+        const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[a.id]);
+        const n = denuncias.filter(e=>e.estado===true).length + evidencias.filter(e=>e.estado===true).length;
         return `<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre} (${n}/40)</option>`;
       }).join('');
 
