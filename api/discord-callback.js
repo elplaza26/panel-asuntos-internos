@@ -36,6 +36,7 @@ export default async function handler(req, res) {
     let autorizado = false;
     let esDai = false;
     let esPolicia = false;
+    let esDirectiva = false;
     let debugInfo = '';
 
     try {
@@ -52,9 +53,13 @@ export default async function handler(req, res) {
           .split(',').map(r => r.trim()).filter(Boolean);
         const rolesPolicia = (process.env.DISCORD_ROLE_POLICIA_IDS || '')
           .split(',').map(r => r.trim()).filter(Boolean);
+        const rolesDirectiva = (process.env.DISCORD_ROLE_DIRECTIVA_IDS || '')
+          .split(',').map(r => r.trim()).filter(Boolean);
 
         esDai = rolesDai.some(r => rolesUsuario.includes(r));
         esPolicia = rolesPolicia.some(r => rolesUsuario.includes(r));
+        esDirectiva = rolesDirectiva.some(r => rolesUsuario.includes(r));
+        if (esDirectiva) esDai = true; // Directiva siempre tiene acceso completo al panel DAI
         autorizado = esDai || esPolicia;
 
         if (!autorizado) {
@@ -78,6 +83,7 @@ export default async function handler(req, res) {
       autorizado,
       esDai,
       esPolicia,
+      esDirectiva,
       debugInfo,
     });
   } catch (e) {
