@@ -1063,6 +1063,7 @@ async function addAgente(){
     if(anterior && anterior.rango && anterior.rango !== rango){
       await registrarCambioRango(id, nombre, anterior.rango, rango);
       sincronizarRolDiscord(discord, anterior.rango, rango); // se hace en segundo plano, no bloquea el guardado
+      sincronizarApodoDiscord(discord, rango, nombre, placa);
     }
     registrarAuditoria(anterior ? `Editó al agente ${nombre}${placa? ' (#'+placa+')':''}` : `Registró al agente ${nombre}${placa? ' (#'+placa+')':''}`);
     cancelarEdicionAgente();
@@ -1260,6 +1261,7 @@ async function aprobarIngreso(id){
     await db.collection('agentes').doc(id).update({ estado: 'activo' });
     registrarAuditoria(`Aprobó el ingreso de ${ag.nombre}`);
     const resultado = await sincronizarRolDiscord(ag.discord, null, ag.rango || 'Cadete');
+    sincronizarApodoDiscord(ag.discord, ag.rango || 'Cadete', ag.nombre, ag.placa);
     if(resultado.omitido){
       showToast(`${ag.nombre} aprobado (Discord no se actualizó: ${resultado.razon})`);
     }else if(resultado.errores && resultado.errores.length){
@@ -2250,6 +2252,24 @@ async function sincronizarRolDiscord(discordUserId, rangoAnterior, rangoNuevo){
   }
 }
 
+async function sincronizarApodoDiscord(discordUserId, rango, nombre, placa){
+  if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
+  const nick = `${rango||''} | ${nombre||''}${placa? ' #'+placa : ''}`.trim();
+  if(!nick) return { omitido:true, razon:'No hay datos suficientes para armar el apodo.' };
+  try{
+    const resp = await fetch('/api/discord-update-nick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discordUserId, nick })
+    });
+    const texto = await resp.text();
+    try{ return JSON.parse(texto); }
+    catch(e){ return { omitido:true, razon:`Respuesta inesperada (código ${resp.status}). Es probable que falte subir api/discord-update-nick.js a GitHub.` }; }
+  }catch(e){
+    return { omitido:true, razon:'Error de conexión al cambiar el apodo: ' + String(e) };
+  }
+}
+
 function renderAscensos(){
   const elElegibles = document.getElementById('tabla-elegibles');
   const elProgreso = document.getElementById('tabla-en-progreso');
@@ -2340,6 +2360,7 @@ async function ejecutarAscensoManual(){
     document.getElementById('asc-nota').value = '';
 
     const resultadoDiscord = await sincronizarRolDiscord(agente.discord, rangoAnterior, rangoNuevo);
+    sincronizarApodoDiscord(agente.discord, rangoNuevo, agente.nombre, agente.placa);
     if(resultadoDiscord.omitido){
       showToast(`${agente.nombre} ascendido a ${rangoNuevo} (Discord no se actualizó: ${resultadoDiscord.razon})`);
     }else if(resultadoDiscord.errores && resultadoDiscord.errores.length){
