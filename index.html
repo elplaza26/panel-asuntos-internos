@@ -447,6 +447,9 @@
                 <option value="Staff">Staff</option>
                 <option value="Admin Staff Policial">Admin Staff Policial</option>
               </optgroup>
+              <optgroup label="DAI">
+                <option value="Pasante DAI">Pasante DAI</option>
+              </optgroup>
               <optgroup label="Comisarios">
                 <option value="Comisario Superior">Comisario Superior</option>
                 <option value="Comisario General">Comisario General</option>
@@ -770,6 +773,12 @@
         <div class="stamp">AUTOMATIZACIÓN<br>DE RANGOS</div>
       </header>
 
+      <div class="panel" id="panel-ascensos-pendientes-directiva" style="display:none;">
+        <h3>⏳ Ascensos pendientes de aprobación</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Los ascensos ejecutados por el DAI (sin rol Directiva) quedan aquí hasta que los apruebes o rechaces.</p>
+        <div id="tabla-ascensos-pendientes"></div>
+      </div>
+
       <div class="panel">
         <h3>Ascenso manual</h3>
         <div class="form-grid">
@@ -788,6 +797,9 @@
                 <option value="Dev. Discord">Dev. Discord</option>
                 <option value="Staff">Staff</option>
                 <option value="Admin Staff Policial">Admin Staff Policial</option>
+              </optgroup>
+              <optgroup label="DAI">
+                <option value="Pasante DAI">Pasante DAI</option>
               </optgroup>
               <optgroup label="Comisarios">
                 <option value="Comisario Superior">Comisario Superior</option>
@@ -835,6 +847,12 @@
           <strong>agregar automáticamente el rol nuevo y quitar el anterior</strong> en Discord (necesita que el agente tenga su ID de Discord cargado, y que el bot tenga permiso de "Manage Roles" por encima de esos roles).
           Deja en blanco los rangos que no tengan un rol asociado en Discord.
         </p>
+        <div class="form-grid" style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--navy-700);">
+          <div class="field" style="grid-column: span 3;">
+            <label>Rol base de "Policía" (se agrega siempre, junto al de rango — nunca se quita)</label>
+            <input id="rol-base-policia" placeholder="ID del rol en Discord">
+          </div>
+        </div>
         <div id="form-roles-discord" class="form-grid"></div>
         <button class="btn secondary" style="margin-top:14px;" onclick="guardarRolesDiscord()">Guardar roles de Discord</button>
       </div>
@@ -1078,9 +1096,11 @@ function mostrarApp(){
     const esDirectiva = !!usuarioActual.esDirectiva;
     const panelRequisitos = document.getElementById('panel-requisitos-ascenso');
     const panelRolesRango = document.getElementById('panel-roles-discord-rango');
+    const panelAscensosPendientes = document.getElementById('panel-ascensos-pendientes-directiva');
     const navHistorial = document.getElementById('nav-historial');
     if(panelRequisitos) panelRequisitos.style.display = esDirectiva ? 'block' : 'none';
     if(panelRolesRango) panelRolesRango.style.display = esDirectiva ? 'block' : 'none';
+    if(panelAscensosPendientes) panelAscensosPendientes.style.display = esDirectiva ? 'block' : 'none';
     if(navHistorial) navHistorial.style.display = esDirectiva ? 'flex' : 'none';
     initListeners();
   }else{
@@ -1127,10 +1147,13 @@ let canalStrikesId = '';
 let canalWarningsId = '';
 let rolesSancionPorTipo = {};
 let requisitosAscenso = {};
+let ascensosPendientes = [];
 let rolesDiscordPorRango = {};
+let rolBasePolicia = '';
 
 const RANGOS_ORDEN = [
   'Director General','Sub Director','Jefe Departamento','Sub Jefe de Departamento','Dev. Discord','Staff','Admin Staff Policial',
+  'Pasante DAI',
   'Comisario Superior','Comisario General','Primer Comisario',
   'Comisionado Jefe','Comisionado',
   'Inspector Jefe','Inspector',
@@ -1235,6 +1258,11 @@ function initListeners(){
     renderHistorialRangos();
   }, ()=>{});
 
+  db.collection('ascensosPendientes').onSnapshot(snap=>{
+    ascensosPendientes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderAscensosPendientes();
+  }, ()=>{});
+
   db.collection('config').doc('requisitosAscenso').onSnapshot(doc=>{
     requisitosAscenso = doc.exists ? (doc.data().dias || {}) : {};
     renderRequisitosForm();
@@ -1242,7 +1270,11 @@ function initListeners(){
   }, ()=>{});
 
   db.collection('config').doc('rolesDiscord').onSnapshot(doc=>{
-    rolesDiscordPorRango = doc.exists ? (doc.data().roles || {}) : {};
+    const datos = doc.exists ? doc.data() : {};
+    rolesDiscordPorRango = datos.roles || {};
+    rolBasePolicia = datos.rolBase || '';
+    const inputBase = document.getElementById('rol-base-policia');
+    if(inputBase && !inputBase.value) inputBase.value = rolBasePolicia;
     renderRolesDiscordForm();
   }, ()=>{});
 
@@ -1649,6 +1681,24 @@ async function guardarRolesSancion(){
   }catch(e){ showToast('Error al guardar los roles'); }
 }
 
+async function expulsarDeDiscord(discordUserId){
+  if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
+  const rolExpulsion = rolesSancionPorTipo.expulsion;
+  if(!rolExpulsion) return { omitido:true, razon:'No hay un rol de Discord configurado para "Expulsión".' };
+  try{
+    const resp = await fetch('/api/discord-role-update', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ discordUserId, soloRoles: [rolExpulsion] })
+    });
+    const texto = await resp.text();
+    try{ return JSON.parse(texto); }
+    catch(e){ return { omitido:true, razon:`Respuesta inesperada (código ${resp.status}).` }; }
+  }catch(e){
+    return { omitido:true, razon:'Error de conexión al expulsar en Discord.' };
+  }
+}
+
 async function asignarRolSancion(discordUserId, gravedad, nivelActual, nivelAnterior){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
 
@@ -1699,8 +1749,13 @@ async function addSancion(){
     document.getElementById('sa-evidencia').value='';
     showToast('Sanción aplicada');
 
-    // Asignar automáticamente el rol de Discord correspondiente al nivel (Warn/Strike/Expulsión), si está configurado
-    const resultadoRol = await asignarRolSancion(agente?.discord, gravedad, nivelActual, nivelAnterior);
+    // Asignar automáticamente el rol de Discord correspondiente al nivel (Warn/Strike), o expulsar por completo si es "baja"
+    let resultadoRol;
+    if(gravedad === 'baja'){
+      resultadoRol = await expulsarDeDiscord(agente?.discord);
+    }else{
+      resultadoRol = await asignarRolSancion(agente?.discord, gravedad, nivelActual, nivelAnterior);
+    }
     if(!resultadoRol.omitido && resultadoRol.errores && resultadoRol.errores.length){
       console.error('Error al asignar rol de sanción:', resultadoRol.errores);
     }
@@ -2948,8 +3003,9 @@ async function guardarRolesDiscord(){
     const v = inp.value.trim();
     if(v) roles[inp.dataset.rango] = v;
   });
+  const rolBase = document.getElementById('rol-base-policia').value.trim();
   try{
-    await db.collection('config').doc('rolesDiscord').set({ roles });
+    await db.collection('config').doc('rolesDiscord').set({ roles, rolBase });
     registrarAuditoria('Actualizó el mapeo de roles de Discord por rango');
     showToast('Roles de Discord guardados');
   }catch(e){ showToast('Error al guardar los roles de Discord'); }
@@ -2959,12 +3015,12 @@ async function sincronizarRolDiscord(discordUserId, rangoAnterior, rangoNuevo){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
   const rolNuevoId = rolesDiscordPorRango[rangoNuevo];
   const rolAnteriorId = rolesDiscordPorRango[rangoAnterior];
-  if(!rolNuevoId) return { omitido:true, razon:`No hay un rol de Discord configurado para "${rangoNuevo}".` };
+  if(!rolNuevoId && !rolBasePolicia) return { omitido:true, razon:`No hay un rol de Discord configurado para "${rangoNuevo}".` };
   try{
     const resp = await fetch('/api/discord-role-update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordUserId, rolAnteriorId, rolNuevoId })
+      body: JSON.stringify({ discordUserId, rolAnteriorId, rolNuevoId, rolBaseId: rolBasePolicia || undefined })
     });
     const texto = await resp.text();
     try{
@@ -3059,6 +3115,38 @@ function prellenarAscenso(agenteId){
   document.getElementById('view-ascensos').scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
+async function aplicarAscenso(agenteId, rangoNuevo, fecha, nota, solicitadoPor){
+  const agente = agentes.find(a=>a.id===agenteId);
+  if(!agente) return;
+  const rangoAnterior = agente.rango || '(sin rango)';
+
+  await db.collection('agentes').doc(agenteId).update({
+    rango: rangoNuevo,
+    fechaUltimoAscenso: fecha
+  });
+
+  await db.collection('historialRangos').doc(uid()).set({
+    agenteId, agenteNombre: agente.nombre,
+    rangoAnterior, rangoNuevo, nota,
+    usuario: usuarioActual?.global_name || 'Desconocido',
+    solicitadoPor: solicitadoPor || null,
+    creado: Date.now()
+  });
+
+  registrarAuditoria(`Ascendió a ${agente.nombre}: ${rangoAnterior} → ${rangoNuevo}${solicitadoPor? ' (solicitado por '+solicitadoPor+')' : ''}`);
+
+  const resultadoDiscord = await sincronizarRolDiscord(agente.discord, rangoAnterior, rangoNuevo);
+  sincronizarApodoDiscord(agente.discord, rangoNuevo, agente.nombre, agente.placa);
+  if(resultadoDiscord.omitido){
+    showToast(`${agente.nombre} ascendido a ${rangoNuevo} (Discord no se actualizó: ${resultadoDiscord.razon})`);
+  }else if(resultadoDiscord.errores && resultadoDiscord.errores.length){
+    showToast(`${agente.nombre} ascendido a ${rangoNuevo}, pero hubo un problema actualizando el rol en Discord`);
+    console.error('Error sincronizando Discord:', resultadoDiscord.errores);
+  }else{
+    showToast(`${agente.nombre} ascendido a ${rangoNuevo} y su rol de Discord fue actualizado`);
+  }
+}
+
 async function ejecutarAscensoManual(){
   const agenteId = document.getElementById('asc-agente').value;
   const rangoNuevo = document.getElementById('asc-rango-destino').value;
@@ -3070,34 +3158,73 @@ async function ejecutarAscensoManual(){
   if(!agente){ showToast('No se encontró el agente'); return; }
 
   const rangoAnterior = agente.rango || '(sin rango)';
+
+  // Si NO es Directiva, el ascenso queda pendiente de aprobación en vez de aplicarse directo
+  if(!usuarioActual?.esDirectiva){
+    if(!confirm(`¿Enviar este ascenso a Directiva para su aprobación?\n\n${agente.nombre}: ${rangoAnterior} → ${rangoNuevo}`)) return;
+    try{
+      await db.collection('ascensosPendientes').doc(uid()).set({
+        agenteId, agenteNombre: agente.nombre, rangoAnterior, rangoNuevo, fecha, nota,
+        solicitadoPor: usuarioActual?.global_name || 'Desconocido',
+        creado: Date.now()
+      });
+      registrarAuditoria(`Solicitó el ascenso de ${agente.nombre}: ${rangoAnterior} → ${rangoNuevo} (pendiente de aprobación de Directiva)`);
+      document.getElementById('asc-nota').value = '';
+      showToast('Ascenso enviado a Directiva para su aprobación');
+    }catch(e){ showToast('Error al enviar la solicitud de ascenso'); }
+    return;
+  }
+
+  // Directiva: se aplica directo
   if(!confirm(`¿Confirmas el cambio de rango de ${agente.nombre}?\n\n${rangoAnterior} → ${rangoNuevo}`)) return;
   try{
-    await db.collection('agentes').doc(agenteId).update({
-      rango: rangoNuevo,
-      fechaUltimoAscenso: fecha
-    });
-
-    await db.collection('historialRangos').doc(uid()).set({
-      agenteId, agenteNombre: agente.nombre,
-      rangoAnterior, rangoNuevo, nota,
-      usuario: usuarioActual?.global_name || 'Desconocido',
-      creado: Date.now()
-    });
-
-    registrarAuditoria(`Ascendió a ${agente.nombre}: ${rangoAnterior} → ${rangoNuevo}`);
+    await aplicarAscenso(agenteId, rangoNuevo, fecha, nota, null);
     document.getElementById('asc-nota').value = '';
-
-    const resultadoDiscord = await sincronizarRolDiscord(agente.discord, rangoAnterior, rangoNuevo);
-    sincronizarApodoDiscord(agente.discord, rangoNuevo, agente.nombre, agente.placa);
-    if(resultadoDiscord.omitido){
-      showToast(`${agente.nombre} ascendido a ${rangoNuevo} (Discord no se actualizó: ${resultadoDiscord.razon})`);
-    }else if(resultadoDiscord.errores && resultadoDiscord.errores.length){
-      showToast(`${agente.nombre} ascendido a ${rangoNuevo}, pero hubo un problema actualizando el rol en Discord`);
-      console.error('Error sincronizando Discord:', resultadoDiscord.errores);
-    }else{
-      showToast(`${agente.nombre} ascendido a ${rangoNuevo} y su rol de Discord fue actualizado`);
-    }
   }catch(e){ showToast('Error al ejecutar el ascenso'); }
+}
+
+async function aprobarAscensoPendiente(id){
+  const sol = ascensosPendientes.find(a=>a.id===id);
+  if(!sol) return;
+  if(!confirm(`¿Aprobar el ascenso de ${sol.agenteNombre}: ${sol.rangoAnterior} → ${sol.rangoNuevo}?`)) return;
+  try{
+    await aplicarAscenso(sol.agenteId, sol.rangoNuevo, sol.fecha || fechaHoyISO(), sol.nota, sol.solicitadoPor);
+    await db.collection('ascensosPendientes').doc(id).delete();
+    registrarAuditoria(`Aprobó el ascenso de ${sol.agenteNombre} solicitado por ${sol.solicitadoPor}`);
+  }catch(e){ showToast('Error al aprobar el ascenso'); }
+}
+
+async function rechazarAscensoPendiente(id){
+  const sol = ascensosPendientes.find(a=>a.id===id);
+  if(!sol) return;
+  if(!confirm(`¿Rechazar el ascenso de ${sol.agenteNombre}?`)) return;
+  try{
+    await db.collection('ascensosPendientes').doc(id).delete();
+    registrarAuditoria(`Rechazó el ascenso de ${sol.agenteNombre} solicitado por ${sol.solicitadoPor}`);
+    showToast('Ascenso rechazado');
+  }catch(e){ showToast('Error al rechazar'); }
+}
+
+function renderAscensosPendientes(){
+  const el = document.getElementById('tabla-ascensos-pendientes');
+  if(!el) return;
+  if(!ascensosPendientes.length){ el.innerHTML = '<div class="empty">No hay ascensos pendientes de aprobación.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Agente</th><th>Cambio</th><th>Nota</th><th>Solicitado por</th><th>Fecha</th><th></th>
+  </tr></thead><tbody>
+  ${ascensosPendientes.map(s=>`
+    <tr>
+      <td>${s.agenteNombre}</td>
+      <td>${iconoRango(s.rangoAnterior)} ${s.rangoAnterior} → ${iconoRango(s.rangoNuevo)} ${s.rangoNuevo}</td>
+      <td>${s.nota||'—'}</td>
+      <td>${s.solicitadoPor||'—'}</td>
+      <td class="mono">${fmtHora(s.creado)}</td>
+      <td class="row-actions">
+        <button class="btn" style="padding:6px 14px; font-size:11px;" onclick="aprobarAscensoPendiente('${s.id}')">Aprobar</button>
+        <button class="btn danger" style="padding:6px 14px; font-size:11px;" onclick="rechazarAscensoPendiente('${s.id}')">Rechazar</button>
+      </td>
+    </tr>`).join('')}
+  </tbody></table>`;
 }
 
 async function reiniciarRelojes(){
