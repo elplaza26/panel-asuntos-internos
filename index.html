@@ -896,6 +896,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const firebaseConfig = {
@@ -933,7 +934,17 @@ async function initAuth(){
   const guardado = localStorage.getItem('daiUsuario');
   if(guardado){
     usuarioActual = JSON.parse(guardado);
-    mostrarApp();
+    // Esperamos a que Firebase confirme que la sesión guardada de la vez anterior sigue viva
+    firebase.auth().onAuthStateChanged((user)=>{
+      if(user){
+        mostrarApp();
+      }else{
+        // La credencial de la base de datos se perdió (ej. se borraron datos del navegador) — hay que iniciar sesión de nuevo
+        localStorage.removeItem('daiUsuario');
+        usuarioActual = null;
+        mostrarLogin();
+      }
+    });
     return;
   }
 
@@ -944,6 +955,16 @@ async function initAuth(){
       const resp = await fetch('/api/discord-callback?code=' + encodeURIComponent(code));
       const data = await resp.json();
       if(data.id && data.autorizado){
+        if(!data.firebaseToken){
+          mostrarErrorLogin('No se pudo generar tu credencial de base de datos. Avisa a quien administra el panel — es probable que falten configurar las variables de Firebase en Vercel.');
+          return;
+        }
+        try{
+          await firebase.auth().signInWithCustomToken(data.firebaseToken);
+        }catch(e){
+          mostrarErrorLogin('No se pudo autenticar con la base de datos: ' + String(e));
+          return;
+        }
         usuarioActual = data;
         localStorage.setItem('daiUsuario', JSON.stringify(data));
         window.history.replaceState({}, document.title, REDIRECT_URI);
