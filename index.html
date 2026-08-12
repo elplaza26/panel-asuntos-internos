@@ -626,6 +626,12 @@
         </div>
       </div>
 
+      <div class="panel" id="panel-sanciones-pendientes-directiva" style="display:none;">
+        <h3>⏳ Sanciones pendientes de aprobación</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Las sanciones aplicadas por el DAI (sin rol Directiva) quedan aquí hasta que las apruebes o rechaces.</p>
+        <div id="tabla-sanciones-pendientes"></div>
+      </div>
+
       <div class="panel">
         <h3>Aplicar sanción</h3>
         <div class="form-grid">
@@ -1097,10 +1103,12 @@ function mostrarApp(){
     const panelRequisitos = document.getElementById('panel-requisitos-ascenso');
     const panelRolesRango = document.getElementById('panel-roles-discord-rango');
     const panelAscensosPendientes = document.getElementById('panel-ascensos-pendientes-directiva');
+    const panelSancionesPendientes = document.getElementById('panel-sanciones-pendientes-directiva');
     const navHistorial = document.getElementById('nav-historial');
     if(panelRequisitos) panelRequisitos.style.display = esDirectiva ? 'block' : 'none';
     if(panelRolesRango) panelRolesRango.style.display = esDirectiva ? 'block' : 'none';
     if(panelAscensosPendientes) panelAscensosPendientes.style.display = esDirectiva ? 'block' : 'none';
+    if(panelSancionesPendientes) panelSancionesPendientes.style.display = esDirectiva ? 'block' : 'none';
     if(navHistorial) navHistorial.style.display = esDirectiva ? 'flex' : 'none';
     initListeners();
   }else{
@@ -1145,6 +1153,7 @@ let anuncios = [];
 let historialRangos = [];
 let canalStrikesId = '';
 let canalWarningsId = '';
+let sancionesPendientes = [];
 let rolesSancionPorTipo = {};
 let requisitosAscenso = {};
 let ascensosPendientes = [];
@@ -1261,6 +1270,11 @@ function initListeners(){
   db.collection('ascensosPendientes').onSnapshot(snap=>{
     ascensosPendientes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAscensosPendientes();
+  }, ()=>{});
+
+  db.collection('sancionesPendientes').onSnapshot(snap=>{
+    sancionesPendientes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderSancionesPendientes();
   }, ()=>{});
 
   db.collection('config').doc('requisitosAscenso').onSnapshot(doc=>{
@@ -1726,6 +1740,60 @@ async function asignarRolSancion(discordUserId, gravedad, nivelActual, nivelAnte
   }
 }
 
+async function aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, solicitadoPor){
+  const agente = agentes.find(a=>a.id===agenteId);
+  const propias = sanciones.filter(s=>s.agenteId===agenteId);
+  const warns = Math.min(propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0), 3);
+  const strikes = Math.min(propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0), 3);
+  const nivelActual = gravedad === 'leve' ? warns : strikes;
+  const nivelAnterior = nivelActual > 1 ? nivelActual - 1 : null;
+
+  await db.collection('sanciones').doc(uid()).set({ agenteId, gravedad, fecha, evidencia, motivo, solicitadoPor: solicitadoPor||null, creado: Date.now() });
+  registrarAuditoria(`Aplicó una sanción (${gravedad}) a ${nombreAgente(agenteId)}${solicitadoPor? ' (solicitada por '+solicitadoPor+')':''}`);
+  showToast('Sanción aplicada');
+
+  let resultadoRol;
+  if(gravedad === 'baja'){
+    resultadoRol = await expulsarDeDiscord(agente?.discord);
+  }else{
+    resultadoRol = await asignarRolSancion(agente?.discord, gravedad, nivelActual, nivelAnterior);
+  }
+  if(!resultadoRol.omitido && resultadoRol.errores && resultadoRol.errores.length){
+    console.error('Error al asignar rol de sanción:', resultadoRol.errores);
+  }
+
+  const canalDestino = gravedad === 'leve' ? canalWarningsId : canalStrikesId;
+  if(canalDestino){
+    try{
+      const resp = await fetch('/api/discord-post-sancion', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          channelId: canalDestino,
+          discordUserId: agente?.discord || '',
+          autorizadoPorId: usuarioActual?.id || '',
+          autorizadoPorNombre: usuarioActual?.global_name || '',
+          agenteNombre: agente?.nombre || nombreAgente(agenteId),
+          agentePlaca: agente?.placa || '',
+          motivo, gravedad, warns, strikes,
+        })
+      });
+      const texto = await resp.text();
+      let data;
+      try{ data = JSON.parse(texto); }catch(e){ data = null; }
+      if(!data || !data.ok){
+        console.error('Error al avisar en Discord:', texto);
+        showToast(`Sanción guardada, pero Discord dio error (código ${resp.status}) — revisa la consola`);
+      }
+    }catch(e){
+      console.error(e);
+      showToast('Sanción guardada, pero hubo un error de conexión con Discord');
+    }
+  }else{
+    showToast('Sanción guardada (no hay canal de Discord configurado para este tipo de sanción)');
+  }
+}
+
 async function addSancion(){
   const agenteId = document.getElementById('sa-agente').value;
   const gravedad = document.getElementById('sa-gravedad').value;
@@ -1734,63 +1802,74 @@ async function addSancion(){
   const motivo = document.getElementById('sa-motivo').value.trim();
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!motivo){ showToast('Describe el motivo'); return; }
-  try{
-    // Se calcula ANTES de guardar, usando lo que ya existía — así no se cuenta la nueva sanción dos veces
-    const agente = agentes.find(a=>a.id===agenteId);
-    const propias = sanciones.filter(s=>s.agenteId===agenteId);
-    const warns = Math.min(propias.filter(s=>s.gravedad==='leve').length + (gravedad==='leve'?1:0), 3);
-    const strikes = Math.min(propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0), 3);
-    const nivelActual = gravedad === 'leve' ? warns : strikes;
-    const nivelAnterior = nivelActual > 1 ? nivelActual - 1 : null;
 
-    await db.collection('sanciones').doc(uid()).set({ agenteId, gravedad, fecha, evidencia, motivo, creado: Date.now() });
-    registrarAuditoria(`Aplicó una sanción (${gravedad}) a ${nombreAgente(agenteId)}`);
+  // Si NO es Directiva, la sanción queda pendiente de aprobación en vez de aplicarse directo
+  if(!usuarioActual?.esDirectiva){
+    if(!confirm(`¿Enviar esta sanción a Directiva para su aprobación?\n\n${nombreAgente(agenteId)} — ${etiquetaGravedad(gravedad)}`)) return;
+    try{
+      await db.collection('sancionesPendientes').doc(uid()).set({
+        agenteId, gravedad, fecha, evidencia, motivo,
+        solicitadoPor: usuarioActual?.global_name || 'Desconocido',
+        creado: Date.now()
+      });
+      registrarAuditoria(`Solicitó una sanción (${gravedad}) para ${nombreAgente(agenteId)} (pendiente de aprobación de Directiva)`);
+      document.getElementById('sa-motivo').value='';
+      document.getElementById('sa-evidencia').value='';
+      showToast('Sanción enviada a Directiva para su aprobación');
+    }catch(e){ showToast('Error al enviar la solicitud de sanción'); }
+    return;
+  }
+
+  // Directiva: se aplica directo
+  try{
+    await aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, null);
     document.getElementById('sa-motivo').value='';
     document.getElementById('sa-evidencia').value='';
-    showToast('Sanción aplicada');
-
-    // Asignar automáticamente el rol de Discord correspondiente al nivel (Warn/Strike), o expulsar por completo si es "baja"
-    let resultadoRol;
-    if(gravedad === 'baja'){
-      resultadoRol = await expulsarDeDiscord(agente?.discord);
-    }else{
-      resultadoRol = await asignarRolSancion(agente?.discord, gravedad, nivelActual, nivelAnterior);
-    }
-    if(!resultadoRol.omitido && resultadoRol.errores && resultadoRol.errores.length){
-      console.error('Error al asignar rol de sanción:', resultadoRol.errores);
-    }
-
-    const canalDestino = gravedad === 'leve' ? canalWarningsId : canalStrikesId;
-    if(canalDestino){
-      try{
-        const resp = await fetch('/api/discord-post-sancion', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            channelId: canalDestino,
-            discordUserId: agente?.discord || '',
-            autorizadoPorId: usuarioActual?.id || '',
-            autorizadoPorNombre: usuarioActual?.global_name || '',
-            agenteNombre: agente?.nombre || nombreAgente(agenteId),
-            agentePlaca: agente?.placa || '',
-            motivo, gravedad, warns, strikes,
-          })
-        });
-        const texto = await resp.text();
-        let data;
-        try{ data = JSON.parse(texto); }catch(e){ data = null; }
-        if(!data || !data.ok){
-          console.error('Error al avisar en Discord:', texto);
-          showToast(`Sanción guardada, pero Discord dio error (código ${resp.status}) — revisa la consola`);
-        }
-      }catch(e){
-        console.error(e);
-        showToast('Sanción guardada, pero hubo un error de conexión con Discord');
-      }
-    }else{
-      showToast('Sanción guardada (no hay canal de Discord configurado para este tipo de sanción)');
-    }
   }catch(e){ showToast('Error al guardar la sanción'); }
+}
+
+async function aprobarSancionPendiente(id){
+  const sol = sancionesPendientes.find(s=>s.id===id);
+  if(!sol) return;
+  if(!confirm(`¿Aprobar esta sanción de ${nombreAgente(sol.agenteId)} (${etiquetaGravedad(sol.gravedad)})?`)) return;
+  try{
+    await aplicarSancion(sol.agenteId, sol.gravedad, sol.fecha, sol.evidencia, sol.motivo, sol.solicitadoPor);
+    await db.collection('sancionesPendientes').doc(id).delete();
+    registrarAuditoria(`Aprobó la sanción de ${nombreAgente(sol.agenteId)} solicitada por ${sol.solicitadoPor}`);
+  }catch(e){ showToast('Error al aprobar la sanción'); }
+}
+
+async function rechazarSancionPendiente(id){
+  const sol = sancionesPendientes.find(s=>s.id===id);
+  if(!sol) return;
+  if(!confirm(`¿Rechazar esta sanción de ${nombreAgente(sol.agenteId)}?`)) return;
+  try{
+    await db.collection('sancionesPendientes').doc(id).delete();
+    registrarAuditoria(`Rechazó la sanción de ${nombreAgente(sol.agenteId)} solicitada por ${sol.solicitadoPor}`);
+    showToast('Sanción rechazada');
+  }catch(e){ showToast('Error al rechazar'); }
+}
+
+function renderSancionesPendientes(){
+  const el = document.getElementById('tabla-sanciones-pendientes');
+  if(!el) return;
+  if(!sancionesPendientes.length){ el.innerHTML = '<div class="empty">No hay sanciones pendientes de aprobación.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Agente</th><th>Gravedad</th><th>Motivo</th><th>Evidencia</th><th>Solicitado por</th><th></th>
+  </tr></thead><tbody>
+  ${sancionesPendientes.map(s=>`
+    <tr>
+      <td>${nombreAgente(s.agenteId)}</td>
+      <td><span class="pill ${s.gravedad}">${etiquetaGravedad(s.gravedad)}</span></td>
+      <td>${s.motivo}</td>
+      <td>${s.evidencia ? `<a class="evidence-link" href="${s.evidencia}" target="_blank" rel="noopener">Ver →</a>` : '—'}</td>
+      <td>${s.solicitadoPor||'—'}</td>
+      <td class="row-actions">
+        <button class="btn" style="padding:6px 14px; font-size:11px;" onclick="aprobarSancionPendiente('${s.id}')">Aprobar</button>
+        <button class="btn danger" style="padding:6px 14px; font-size:11px;" onclick="rechazarSancionPendiente('${s.id}')">Rechazar</button>
+      </td>
+    </tr>`).join('')}
+  </tbody></table>`;
 }
 
 async function eliminarSancion(id){
