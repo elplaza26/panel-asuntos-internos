@@ -626,7 +626,11 @@
       </div>
 
       <div class="panel" id="panel-checklist-denuncias" style="display:none;">
-        <h3>Denuncias/evidencias validadas — <span id="de-nombre-agente"></span></h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+          <h3 style="margin:0;">Denuncias/evidencias — <span id="de-nombre-agente"></span></h3>
+          <button class="btn danger" style="padding:8px 16px; font-size:11px;" onclick="reiniciarChecklistDenuncias()">Reiniciar las 20 casillas</button>
+        </div>
+        <p style="color:var(--paper-dim); font-size:11.5px; margin-top:8px;">Escribe el número de denuncia en cada casilla. Clic en el símbolo para marcarla: vacío → ✓ válida → ✗ rechazada → vacío otra vez.</p>
         <div id="grid-checks" style="display:grid; grid-template-columns: repeat(10, 1fr); gap:8px; margin:16px 0;"></div>
         <div class="mono" style="color:var(--brass); font-size:13px;"><span id="conteo-checks">0</span> / 20 validadas</div>
       </div>
@@ -1875,6 +1879,16 @@ let denunciasChecklists = {}; // { agenteId: [bool x20] }
 let checklistAgenteActual = null;
 let checklistActual = new Array(20).fill(false);
 
+function entradaVacia(){ return { numero: '', estado: null }; }
+
+function normalizarEntrada(e){
+  // Compatibilidad con el formato viejo (true/false/null sueltos)
+  if(e && typeof e === 'object') return { numero: e.numero || '', estado: e.estado===true ? true : e.estado===false ? false : null };
+  if(e === true) return { numero: '', estado: true };
+  if(e === false) return { numero: '', estado: false };
+  return entradaVacia();
+}
+
 function cargarChecklistDenuncias(){
   const agenteId = document.getElementById('de-agente-select').value;
   const panel = document.getElementById('panel-checklist-denuncias');
@@ -1882,8 +1896,9 @@ function cargarChecklistDenuncias(){
   checklistAgenteActual = agenteId;
   const agente = agentes.find(a=>a.id===agenteId);
   document.getElementById('de-nombre-agente').textContent = agente ? `${agente.placa? '#'+agente.placa+' — ':''}${agente.nombre}` : '';
-  checklistActual = (denunciasChecklists[agenteId] || new Array(20).fill(false)).slice(0, 20);
-  while(checklistActual.length < 20) checklistActual.push(false);
+  const guardado = (denunciasChecklists[agenteId] || []).map(normalizarEntrada);
+  checklistActual = guardado.slice(0, 20);
+  while(checklistActual.length < 20) checklistActual.push(entradaVacia());
   panel.style.display = 'block';
   renderGridChecks();
 }
@@ -1891,20 +1906,52 @@ function cargarChecklistDenuncias(){
 function renderGridChecks(){
   const el = document.getElementById('grid-checks');
   if(!el) return;
-  el.innerHTML = checklistActual.map((val, i)=>`
-    <label style="display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; padding:10px 4px; background:${val? 'rgba(201,162,39,0.12)' : 'var(--navy-950)'}; border:1px solid ${val? 'var(--brass-dim)' : 'var(--navy-700)'}; border-radius:6px;">
-      <input type="checkbox" ${val?'checked':''} onchange="toggleCheckDenuncia(${i})" style="width:17px; height:17px; accent-color:var(--brass);">
-      <span class="mono" style="font-size:10px; color:var(--paper-dim);">${i+1}</span>
-    </label>`).join('');
-  const total = checklistActual.filter(Boolean).length;
+  el.innerHTML = checklistActual.map((entrada, i)=>{
+    const esValida = entrada.estado === true;
+    const esMala = entrada.estado === false;
+    const fondo = esValida ? 'rgba(79,122,82,0.18)' : esMala ? 'rgba(179,57,44,0.18)' : 'var(--navy-950)';
+    const borde = esValida ? 'var(--green)' : esMala ? 'var(--red)' : 'var(--navy-700)';
+    const simbolo = esValida ? '✓' : esMala ? '✗' : '·';
+    const colorSimbolo = esValida ? '#8fbf92' : esMala ? '#e08678' : 'var(--steel-600)';
+    return `
+    <div style="display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px; background:${fondo}; border:1px solid ${borde}; border-radius:6px;">
+      <input type="text" value="${(entrada.numero||'').replace(/"/g,'&quot;')}" placeholder="N° ${i+1}"
+        onchange="actualizarNumeroDenuncia(${i}, this.value)"
+        style="width:100%; text-align:center; background:var(--navy-900); border:1px solid var(--navy-700); color:var(--paper); font-size:10.5px; padding:4px 2px; border-radius:4px;">
+      <span onclick="ciclarCheckDenuncia(${i})" style="cursor:pointer; font-size:17px; font-weight:700; color:${colorSimbolo}; line-height:1; user-select:none;">${simbolo}</span>
+    </div>`;
+  }).join('');
+  const total = checklistActual.filter(e=>e.estado===true).length;
   const conteo = document.getElementById('conteo-checks');
   if(conteo) conteo.textContent = total;
 }
 
-async function toggleCheckDenuncia(index){
+async function actualizarNumeroDenuncia(index, valor){
   if(!checklistAgenteActual) return;
-  checklistActual[index] = !checklistActual[index];
+  checklistActual[index].numero = valor.trim();
+  await guardarChecklistDenuncias();
+}
+
+async function ciclarCheckDenuncia(index){
+  if(!checklistAgenteActual) return;
+  // Vacío -> Válida (✓) -> Rechazada (✗) -> Vacío otra vez
+  const actual = checklistActual[index].estado;
+  checklistActual[index].estado = actual === true ? false : actual === false ? null : true;
   renderGridChecks();
+  await guardarChecklistDenuncias();
+}
+
+async function reiniciarChecklistDenuncias(){
+  if(!checklistAgenteActual) return;
+  const agente = agentes.find(a=>a.id===checklistAgenteActual);
+  if(!confirm(`¿Reiniciar las 20 casillas de ${agente? agente.nombre : 'este agente'}? Se borran los números y las marcas.`)) return;
+  checklistActual = Array.from({length:20}, entradaVacia);
+  renderGridChecks();
+  await guardarChecklistDenuncias();
+  showToast('Casillas reiniciadas');
+}
+
+async function guardarChecklistDenuncias(){
   try{
     await db.collection('denunciasChecklist').doc(checklistAgenteActual).set({
       checks: checklistActual,
@@ -1912,23 +1959,25 @@ async function toggleCheckDenuncia(index){
       actualizado: Date.now()
     });
     const agente = agentes.find(a=>a.id===checklistAgenteActual);
-    registrarAuditoria(`Actualizó el checklist de denuncias/evidencias de ${agente? agente.nombre : checklistAgenteActual} (${checklistActual.filter(Boolean).length}/20)`);
+    const validas = checklistActual.filter(e=>e.estado===true).length;
+    const malas = checklistActual.filter(e=>e.estado===false).length;
+    registrarAuditoria(`Actualizó el checklist de denuncias/evidencias de ${agente? agente.nombre : checklistAgenteActual} (${validas} válidas, ${malas} rechazadas)`);
   }catch(e){ showToast('Error al guardar el checklist'); }
 }
 
 function denunciasValidadas(agente){
-  const checks = denunciasChecklists[agente.id] || [];
-  return checks.filter(Boolean).length;
+  const checks = (denunciasChecklists[agente.id] || []).map(normalizarEntrada);
+  return checks.filter(e=>e.estado===true).length;
 }
 
 function renderDenunciasStats(){
   const statTotal = document.getElementById('stat-denuncias-total');
   const statAgentes = document.getElementById('stat-denuncias-agentes');
   const statCompletos = document.getElementById('stat-denuncias-completos');
-  const entradas = Object.values(denunciasChecklists);
-  const total = entradas.reduce((acc, checks)=> acc + checks.filter(Boolean).length, 0);
-  const iniciados = entradas.filter(checks => checks.some(Boolean)).length;
-  const completos = entradas.filter(checks => checks.filter(Boolean).length >= 20).length;
+  const entradas = Object.values(denunciasChecklists).map(checks => checks.map(normalizarEntrada));
+  const total = entradas.reduce((acc, checks)=> acc + checks.filter(e=>e.estado===true).length, 0);
+  const iniciados = entradas.filter(checks => checks.some(e=>e.estado!==null || (e.numero && e.numero.trim()))).length;
+  const completos = entradas.filter(checks => checks.filter(e=>e.estado===true).length >= 20).length;
   if(statTotal) statTotal.textContent = total;
   if(statAgentes) statAgentes.textContent = iniciados;
   if(statCompletos) statCompletos.textContent = completos;
@@ -1938,7 +1987,7 @@ function renderDenunciasStats(){
     const actual = selAgente.value;
     const opts = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}))
       .map(a=>{
-        const n = (denunciasChecklists[a.id]||[]).filter(Boolean).length;
+        const n = (denunciasChecklists[a.id]||[]).map(normalizarEntrada).filter(e=>e.estado===true).length;
         return `<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre} (${n}/20)</option>`;
       }).join('');
     selAgente.innerHTML = agentes.length ? `<option value="">Selecciona un agente...</option>${opts}` : '<option value="">Registra un agente primero</option>';
