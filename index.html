@@ -292,6 +292,8 @@
       <button class="nav-btn" data-view="bonos"><span class="n">05</span> Bonos</button>
       <button class="nav-btn" data-view="ascensos"><span class="n">06</span> Ascensos</button>
       <button class="nav-btn" data-view="ingresos"><span class="n">07</span> Nuevos Ingresos</button>
+      <button class="nav-btn" data-view="ausencias"><span class="n">08</span> Ausencias</button>
+      <button class="nav-btn" id="nav-historial" data-view="historial" style="display:none;"><span class="n">09</span> Historial</button>
     </nav>
     <div class="sidebar-footer">
       <div id="usuario-actual" style="color:var(--paper); font-size:12.5px; margin-bottom:8px; display:flex; align-items:center;"></div>
@@ -353,11 +355,6 @@
         </span>
       </div>
       <div id="panel-inactivos"></div>
-
-      <div id="bloque-actividad-reciente">
-        <div class="section-title">Actividad reciente</div>
-        <div id="panel-actividad"></div>
-      </div>
 
       <div class="section-title">Últimas bitácoras registradas</div>
       <div id="panel-ultimas-bitacoras"></div>
@@ -754,6 +751,41 @@
       <div id="tabla-pendientes-ingreso"></div>
     </section>
 
+    <!-- AUSENCIAS -->
+    <section class="view" id="view-ausencias">
+      <header class="top">
+        <h2>Ausencias</h2>
+        <div class="stamp">JUSTIFICACIONES<br>DEL PERSONAL</div>
+      </header>
+
+      <div class="panel">
+        <h3>Registrar ausencia</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>Agente</label>
+            <select id="au-agente"></select>
+          </div>
+          <div class="field"><label>Desde</label><input id="au-desde" type="date"></div>
+          <div class="field"><label>Hasta</label><input id="au-hasta" type="date"></div>
+          <div class="field" style="grid-column: span 3;"><label>Motivo</label><input id="au-motivo" placeholder="Ej. Viaje familiar, motivos de salud, etc."></div>
+          <div class="field"><button class="btn" onclick="addAusencia()">Registrar</button></div>
+        </div>
+      </div>
+
+      <div class="section-title">Historial de ausencias</div>
+      <div id="tabla-ausencias"></div>
+    </section>
+
+    <!-- HISTORIAL (solo Directiva) -->
+    <section class="view" id="view-historial">
+      <header class="top">
+        <h2>Historial</h2>
+        <div class="stamp">ACTIVIDAD<br>COMPLETA</div>
+      </header>
+      <div class="section-title">Todas las acciones registradas en el panel</div>
+      <div id="tabla-historial-completo"></div>
+    </section>
+
   </main>
 </div>
 
@@ -787,6 +819,16 @@
         <div id="turno-estado"></div>
       </div>
 
+      <div class="panel" id="panel-registrar-ausencia" style="display:none;">
+        <h3>Registrar una ausencia</h3>
+        <div class="form-grid">
+          <div class="field"><label>Desde</label><input id="mi-au-desde" type="date"></div>
+          <div class="field"><label>Hasta</label><input id="mi-au-hasta" type="date"></div>
+          <div class="field" style="grid-column: span 2;"><label>Motivo</label><input id="mi-au-motivo" placeholder="Ej. Viaje familiar, motivos de salud, etc."></div>
+          <div class="field"><button class="btn" onclick="registrarMiAusencia()">Registrar</button></div>
+        </div>
+      </div>
+
       <div id="policia-info"></div>
 
       <div class="section-title">Mis bitácoras</div>
@@ -797,6 +839,9 @@
 
       <div class="section-title">Mis bonos</div>
       <div id="policia-bonos"></div>
+
+      <div class="section-title">Mis ausencias</div>
+      <div id="policia-ausencias"></div>
     </section>
   </main>
 </div>
@@ -881,12 +926,12 @@ function mostrarApp(){
       badge.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
     }
     const esDirectiva = !!usuarioActual.esDirectiva;
-    const bloqueActividad = document.getElementById('bloque-actividad-reciente');
     const panelRequisitos = document.getElementById('panel-requisitos-ascenso');
     const panelRolesRango = document.getElementById('panel-roles-discord-rango');
-    if(bloqueActividad) bloqueActividad.style.display = esDirectiva ? 'block' : 'none';
+    const navHistorial = document.getElementById('nav-historial');
     if(panelRequisitos) panelRequisitos.style.display = esDirectiva ? 'block' : 'none';
     if(panelRolesRango) panelRolesRango.style.display = esDirectiva ? 'block' : 'none';
+    if(navHistorial) navHistorial.style.display = esDirectiva ? 'flex' : 'none';
     initListeners();
   }else{
     document.getElementById('app-policia').style.display = 'flex';
@@ -925,6 +970,7 @@ let agentes = [];
 let bitacoras = [];
 let sanciones = [];
 let bonos = [];
+let ausencias = [];
 let historialRangos = [];
 let canalStrikesId = '';
 let canalWarningsId = '';
@@ -1003,9 +1049,14 @@ function initListeners(){
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
 
+  db.collection('ausencias').onSnapshot(snap=>{
+    ausencias = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderAusenciasTabla();
+  }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('auditoria').onSnapshot(snap=>{
     auditoria = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
-    renderPanel();
+    renderHistorialCompleto();
   }, ()=>{});
 
   db.collection('historialRangos').onSnapshot(snap=>{
@@ -1580,6 +1631,8 @@ function renderSelects(){
   document.getElementById('sa-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
   document.getElementById('bo-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
   document.getElementById('asc-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+  const selAusencia = document.getElementById('au-agente');
+  if(selAusencia) selAusencia.innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
 }
 
 function renderAgentesTabla(){
@@ -1650,6 +1703,118 @@ async function editarNota(id){
     await db.collection('agentes').doc(id).update({ notas: nueva.trim() });
     registrarAuditoria(`Actualizó la nota interna de ${ag.nombre}`);
   }catch(e){ showToast('Error al guardar la nota'); }
+}
+
+function renderHistorialCompleto(){
+  const el = document.getElementById('tabla-historial-completo');
+  if(!el) return;
+  if(!auditoria.length){ el.innerHTML = '<div class="empty">Sin actividad registrada todavía.</div>'; return; }
+  el.innerHTML = `<table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th></tr></thead><tbody>
+    ${auditoria.map(a=>`<tr><td class="mono">${fmtHora(a.creado)}</td><td>${a.usuario||'—'}</td><td>${a.accion||'—'}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+async function addAusencia(){
+  const agenteId = document.getElementById('au-agente').value;
+  const desde = document.getElementById('au-desde').value;
+  const hasta = document.getElementById('au-hasta').value;
+  const motivo = document.getElementById('au-motivo').value.trim();
+  if(!agenteId){ showToast('Selecciona un agente'); return; }
+  if(!desde){ showToast('Selecciona la fecha de inicio'); return; }
+  if(!motivo){ showToast('Describe el motivo'); return; }
+  try{
+    await db.collection('ausencias').doc(uid()).set({
+      agenteId, desde, hasta: hasta || desde, motivo,
+      registradoPor: usuarioActual?.global_name || 'Desconocido',
+      creado: Date.now()
+    });
+    registrarAuditoria(`Registró una ausencia de ${nombreAgente(agenteId)}`);
+    document.getElementById('au-motivo').value = '';
+    showToast('Ausencia registrada');
+  }catch(e){ showToast('Error al registrar la ausencia'); }
+}
+
+async function eliminarAusencia(id){
+  const a = ausencias.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar esta ausencia${a? ' de '+nombreAgente(a.agenteId) : ''}?`)) return;
+  try{
+    await db.collection('ausencias').doc(id).delete();
+    if(a) registrarAuditoria(`Eliminó una ausencia de ${nombreAgente(a.agenteId)}`);
+    showToast('Ausencia eliminada');
+  }catch(e){ showToast('Error al eliminar'); }
+}
+
+let agenteAusenciaSeleccionado = null;
+
+function verHistorialAusencias(agenteId){
+  agenteAusenciaSeleccionado = agenteId;
+  renderAusenciasTabla();
+}
+
+function volverRosterAusencias(){
+  agenteAusenciaSeleccionado = null;
+  renderAusenciasTabla();
+}
+
+function renderAusenciasTabla(){
+  const el = document.getElementById('tabla-ausencias');
+  if(!el) return;
+
+  // ---- Vista de detalle: historial de un agente específico ----
+  if(agenteAusenciaSeleccionado){
+    const agente = agentes.find(a=>a.id===agenteAusenciaSeleccionado);
+    const propias = ausencias.filter(a=>a.agenteId===agenteAusenciaSeleccionado);
+    el.innerHTML = `
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+          <div>
+            <a href="#" onclick="volverRosterAusencias(); return false;" style="color:var(--brass); font-size:12px; text-decoration:none;">← Volver al listado</a>
+            <h3 style="margin-top:8px;">Historial de Ausencias — ${agente? agente.nombre : nombreAgente(agenteAusenciaSeleccionado)}</h3>
+            <div style="color:var(--paper-dim); font-size:12px; margin-top:2px;">
+              Placa: ${agente?.placa||'—'} · Rango: ${agente? iconoRango(agente.rango)+' '+(agente.rango||'—') : '—'}
+            </div>
+          </div>
+          <div class="card" style="min-width:140px;">
+            <div class="label">Total ausencias</div>
+            <div class="value" style="font-size:26px;">${propias.length}</div>
+          </div>
+        </div>
+      </div>
+      ${propias.length ? `<table><thead><tr>
+        <th>Periodo</th><th>Motivo / Justificación</th><th>Registrado por</th><th>Fecha de registro</th><th></th>
+      </tr></thead><tbody>
+      ${propias.map(a=>`
+        <tr>
+          <td class="mono">${fmtDate(a.desde)} — ${fmtDate(a.hasta)}</td>
+          <td>${a.motivo}</td>
+          <td>${a.registradoPor||'—'}</td>
+          <td class="mono">${a.creado? fmtDate(new Date(a.creado).toISOString().slice(0,10)) : '—'}</td>
+          <td class="row-actions"><button class="icon-btn" onclick="eliminarAusencia('${a.id}')">Eliminar</button></td>
+        </tr>`).join('')}
+      </tbody></table>` : '<div class="empty">Este agente no tiene ausencias registradas.</div>'}
+    `;
+    return;
+  }
+
+  // ---- Vista de roster: todos los agentes con su conteo de ausencias ----
+  if(!agentes.length){ el.innerHTML = '<div class="empty">Registra agentes para ver esta sección.</div>'; return; }
+  const ordenados = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
+  el.innerHTML = `<table><thead><tr>
+    <th>Placa</th><th>Nombre</th><th>Rango</th><th>Estado</th><th>Ausencias registradas</th><th></th>
+  </tr></thead><tbody>
+  ${ordenados.map(a=>{
+    const conteo = ausencias.filter(x=>x.agenteId===a.id).length;
+    return `
+    <tr>
+      <td class="mono">${a.placa||'—'}</td>
+      <td>${a.nombre}</td>
+      <td>${iconoRango(a.rango)} ${a.rango||'—'}</td>
+      <td><span class="pill ${a.estado==='activo'?'activo':(a.estado==='pendiente'?'pendiente':'sancionado')}">${a.estado}</span></td>
+      <td class="mono">${conteo}</td>
+      <td class="row-actions"><button class="btn secondary" style="padding:6px 14px; font-size:11px;" onclick="verHistorialAusencias('${a.id}')">Ver historial</button></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
 }
 
 function renderHistorialRangos(){
@@ -1909,12 +2074,6 @@ function renderPanel(){
   renderGraficaBitacoras(biFilt);
   renderInactivos(agFilt, biFilt);
 
-  const actividad = auditoria.slice(0,8);
-  document.getElementById('panel-actividad').innerHTML = actividad.length ?
-    `<table><thead><tr><th>Hora</th><th>Usuario</th><th>Acción</th></tr></thead><tbody>
-    ${actividad.map(a=>`<tr><td class="mono">${fmtHora(a.creado)}</td><td>${a.usuario||'—'}</td><td>${a.accion||'—'}</td></tr>`).join('')}
-    </tbody></table>` : '<div class="empty">Sin actividad registrada todavía.</div>';
-
   const ultimasB = biFilt.slice(0,5);
   document.getElementById('panel-ultimas-bitacoras').innerHTML = ultimasB.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Descripción</th></tr></thead><tbody>
@@ -2021,6 +2180,7 @@ function renderAll(){
   renderBonosTabla();
   renderPanel();
   renderAscensos();
+  renderAusenciasTabla();
 }
 
 // ---------- NAV ----------
@@ -2038,6 +2198,8 @@ document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
 document.getElementById('bo-fecha').valueAsDate = new Date();
 document.getElementById('asc-fecha').valueAsDate = new Date();
+document.getElementById('au-desde').valueAsDate = new Date();
+document.getElementById('mi-au-desde').valueAsDate = new Date();
 actualizarTipoPeriodo();
 
 // ---------- VISTA POLICÍA (solo lectura) ----------
@@ -2053,6 +2215,7 @@ async function initListenersPolicia(){
     miAgenteId = agente.id;
     renderPoliciaInfo(agente);
     document.getElementById('panel-control-turno').style.display = 'block';
+    document.getElementById('panel-registrar-ausencia').style.display = 'block';
 
     db.collection('bitacoras').where('agenteId','==', agente.id).onSnapshot(s=>{
       const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
@@ -2068,9 +2231,46 @@ async function initListenersPolicia(){
       const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
       renderPoliciaBonos(lista);
     });
+    db.collection('ausencias').where('agenteId','==', agente.id).onSnapshot(s=>{
+      const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+      renderPoliciaAusencias(lista);
+    });
   }catch(e){
     showToast('Error al cargar tu expediente');
   }
+}
+
+async function registrarMiAusencia(){
+  if(!miAgenteId) return;
+  const desde = document.getElementById('mi-au-desde').value;
+  const hasta = document.getElementById('mi-au-hasta').value;
+  const motivo = document.getElementById('mi-au-motivo').value.trim();
+  if(!desde){ showToast('Selecciona la fecha de inicio'); return; }
+  if(!motivo){ showToast('Describe el motivo'); return; }
+  try{
+    await db.collection('ausencias').doc(uid()).set({
+      agenteId: miAgenteId, desde, hasta: hasta || desde, motivo,
+      registradoPor: usuarioActual?.global_name || 'El propio oficial',
+      creado: Date.now()
+    });
+    document.getElementById('mi-au-motivo').value = '';
+    showToast('Ausencia registrada');
+  }catch(e){ showToast('Error al registrar la ausencia'); }
+}
+
+function renderPoliciaAusencias(lista){
+  const el = document.getElementById('policia-ausencias');
+  if(!el) return;
+  el.innerHTML = lista.length ? `<table><thead><tr>
+    <th>Desde</th><th>Hasta</th><th>Motivo</th>
+  </tr></thead><tbody>
+  ${lista.map(a=>`
+    <tr>
+      <td class="mono">${fmtDate(a.desde)}</td>
+      <td class="mono">${fmtDate(a.hasta)}</td>
+      <td>${a.motivo}</td>
+    </tr>`).join('')}
+  </tbody></table>` : '<div class="empty">No tienes ausencias registradas.</div>';
 }
 
 function renderControlTurno(){
