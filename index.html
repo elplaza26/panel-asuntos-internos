@@ -673,8 +673,20 @@
       <div class="panel">
         <h3>Selecciona un agente</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
-          Cada agente puede acumular hasta <strong>20 denuncias/evidencias validadas</strong>. Marca la casilla conforme confirmes que la evidencia está en orden — no hace falta subir ningún archivo, es solo un check.
+          Cada agente puede acumular hasta <strong>20 denuncias/evidencias validadas</strong> por categoría. Marca la casilla conforme confirmes que está en orden — no hace falta subir ningún archivo, es solo un check.
         </p>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div class="field" style="grid-column: span 2;">
+            <label>Buscar por nombre o placa</label>
+            <input id="buscar-agente-denuncia" placeholder="Escribe para filtrar..." oninput="renderDenunciasStats()">
+          </div>
+          <div class="field" style="display:flex; align-items:flex-end; padding-bottom:9px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+              <input type="checkbox" id="solo-iniciados-denuncia" onchange="renderDenunciasStats()" style="width:16px; height:16px; accent-color:var(--brass);">
+              <span style="font-size:12px; text-transform:none; letter-spacing:0;">Solo con checklist iniciado</span>
+            </label>
+          </div>
+        </div>
         <div class="form-grid">
           <div class="field" style="grid-column: span 3;">
             <select id="de-agente-select" onchange="cargarChecklistDenuncias()"></select>
@@ -683,13 +695,22 @@
       </div>
 
       <div class="panel" id="panel-checklist-denuncias" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
-          <h3 style="margin:0;">Denuncias/evidencias — <span id="de-nombre-agente"></span></h3>
-          <button class="btn danger" style="padding:8px 16px; font-size:11px;" onclick="reiniciarChecklistDenuncias()">Reiniciar las 20 casillas</button>
+        <h3 style="margin:0 0 4px 0;">Denuncias/evidencias — <span id="de-nombre-agente"></span></h3>
+        <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:18px;">Escribe el número en cada casilla. Clic en el símbolo para marcarla: vacío → ✓ válida → ✗ rechazada → vacío otra vez.</p>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <h4 style="margin:0; color:var(--brass); font-family:var(--font-display); font-size:15px;">📋 Denuncias</h4>
+          <button class="btn danger" style="padding:6px 14px; font-size:10.5px;" onclick="reiniciarChecklist('denuncias')">Reiniciar las 20 casillas</button>
         </div>
-        <p style="color:var(--paper-dim); font-size:11.5px; margin-top:8px;">Escribe el número de denuncia en cada casilla. Clic en el símbolo para marcarla: vacío → ✓ válida → ✗ rechazada → vacío otra vez.</p>
-        <div id="grid-checks" style="display:grid; grid-template-columns: repeat(10, 1fr); gap:8px; margin:16px 0;"></div>
-        <div class="mono" style="color:var(--brass); font-size:13px;"><span id="conteo-checks">0</span> / 20 validadas</div>
+        <div id="grid-checks-denuncias" style="display:grid; grid-template-columns: repeat(10, 1fr); gap:8px; margin-bottom:8px;"></div>
+        <div class="mono" style="color:var(--brass); font-size:13px; margin-bottom:22px;"><span id="conteo-denuncias">0</span> / 20 validadas</div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px; padding-top:14px; border-top:1px solid var(--navy-700);">
+          <h4 style="margin:0; color:var(--brass); font-family:var(--font-display); font-size:15px;">🗂️ Evidencias</h4>
+          <button class="btn danger" style="padding:6px 14px; font-size:10.5px;" onclick="reiniciarChecklist('evidencias')">Reiniciar las 20 casillas</button>
+        </div>
+        <div id="grid-checks-evidencias" style="display:grid; grid-template-columns: repeat(10, 1fr); gap:8px; margin-bottom:8px;"></div>
+        <div class="mono" style="color:var(--brass); font-size:13px;"><span id="conteo-evidencias">0</span> / 20 validadas</div>
       </div>
     </section>
 
@@ -1965,9 +1986,10 @@ function renderAusenciasTabla(){
   </tbody></table>`;
 }
 
-let denunciasChecklists = {}; // { agenteId: [bool x20] }
+let denunciasChecklists = {}; // { agenteId: { denuncias:[20], evidencias:[20] } }
 let checklistAgenteActual = null;
-let checklistActual = new Array(20).fill(false);
+let checklistDenuncias = Array.from({length:20}, entradaVacia);
+let checklistEvidencias = Array.from({length:20}, entradaVacia);
 
 function entradaVacia(){ return { numero: '', estado: null }; }
 
@@ -1979,6 +2001,12 @@ function normalizarEntrada(e){
   return entradaVacia();
 }
 
+function normalizarLista(lista){
+  const limpia = (lista || []).map(normalizarEntrada).slice(0, 20);
+  while(limpia.length < 20) limpia.push(entradaVacia());
+  return limpia;
+}
+
 function cargarChecklistDenuncias(){
   const agenteId = document.getElementById('de-agente-select').value;
   const panel = document.getElementById('panel-checklist-denuncias');
@@ -1986,17 +2014,21 @@ function cargarChecklistDenuncias(){
   checklistAgenteActual = agenteId;
   const agente = agentes.find(a=>a.id===agenteId);
   document.getElementById('de-nombre-agente').textContent = agente ? `${agente.placa? '#'+agente.placa+' — ':''}${agente.nombre}` : '';
-  const guardado = (denunciasChecklists[agenteId] || []).map(normalizarEntrada);
-  checklistActual = guardado.slice(0, 20);
-  while(checklistActual.length < 20) checklistActual.push(entradaVacia());
+  const guardado = denunciasChecklists[agenteId] || {};
+  checklistDenuncias = normalizarLista(guardado.denuncias);
+  checklistEvidencias = normalizarLista(guardado.evidencias);
   panel.style.display = 'block';
-  renderGridChecks();
+  renderGridChecks('denuncias');
+  renderGridChecks('evidencias');
 }
 
-function renderGridChecks(){
-  const el = document.getElementById('grid-checks');
+function listaPorTipo(tipo){ return tipo === 'denuncias' ? checklistDenuncias : checklistEvidencias; }
+
+function renderGridChecks(tipo){
+  const lista = listaPorTipo(tipo);
+  const el = document.getElementById('grid-checks-'+tipo);
   if(!el) return;
-  el.innerHTML = checklistActual.map((entrada, i)=>{
+  el.innerHTML = lista.map((entrada, i)=>{
     const esValida = entrada.estado === true;
     const esMala = entrada.estado === false;
     const fondo = esValida ? 'rgba(79,122,82,0.18)' : esMala ? 'rgba(179,57,44,0.18)' : 'var(--navy-950)';
@@ -2006,37 +2038,40 @@ function renderGridChecks(){
     return `
     <div style="display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px; background:${fondo}; border:1px solid ${borde}; border-radius:6px;">
       <input type="text" value="${(entrada.numero||'').replace(/"/g,'&quot;')}" placeholder="N° ${i+1}"
-        onchange="actualizarNumeroDenuncia(${i}, this.value)"
+        onchange="actualizarNumeroDenuncia('${tipo}', ${i}, this.value)"
         style="width:100%; text-align:center; background:var(--navy-900); border:1px solid var(--navy-700); color:var(--paper); font-size:10.5px; padding:4px 2px; border-radius:4px;">
-      <span onclick="ciclarCheckDenuncia(${i})" style="cursor:pointer; font-size:17px; font-weight:700; color:${colorSimbolo}; line-height:1; user-select:none;">${simbolo}</span>
+      <span onclick="ciclarCheckDenuncia('${tipo}', ${i})" style="cursor:pointer; font-size:17px; font-weight:700; color:${colorSimbolo}; line-height:1; user-select:none;">${simbolo}</span>
     </div>`;
   }).join('');
-  const total = checklistActual.filter(e=>e.estado===true).length;
-  const conteo = document.getElementById('conteo-checks');
+  const total = lista.filter(e=>e.estado===true).length;
+  const conteo = document.getElementById('conteo-'+tipo);
   if(conteo) conteo.textContent = total;
 }
 
-async function actualizarNumeroDenuncia(index, valor){
+async function actualizarNumeroDenuncia(tipo, index, valor){
   if(!checklistAgenteActual) return;
-  checklistActual[index].numero = valor.trim();
+  listaPorTipo(tipo)[index].numero = valor.trim();
   await guardarChecklistDenuncias();
 }
 
-async function ciclarCheckDenuncia(index){
+async function ciclarCheckDenuncia(tipo, index){
   if(!checklistAgenteActual) return;
   // Vacío -> Válida (✓) -> Rechazada (✗) -> Vacío otra vez
-  const actual = checklistActual[index].estado;
-  checklistActual[index].estado = actual === true ? false : actual === false ? null : true;
-  renderGridChecks();
+  const lista = listaPorTipo(tipo);
+  const actual = lista[index].estado;
+  lista[index].estado = actual === true ? false : actual === false ? null : true;
+  renderGridChecks(tipo);
   await guardarChecklistDenuncias();
 }
 
-async function reiniciarChecklistDenuncias(){
+async function reiniciarChecklist(tipo){
   if(!checklistAgenteActual) return;
   const agente = agentes.find(a=>a.id===checklistAgenteActual);
-  if(!confirm(`¿Reiniciar las 20 casillas de ${agente? agente.nombre : 'este agente'}? Se borran los números y las marcas.`)) return;
-  checklistActual = Array.from({length:20}, entradaVacia);
-  renderGridChecks();
+  const etiqueta = tipo === 'denuncias' ? 'Denuncias' : 'Evidencias';
+  if(!confirm(`¿Reiniciar las 20 casillas de "${etiqueta}" de ${agente? agente.nombre : 'este agente'}? Se borran los números y las marcas.`)) return;
+  if(tipo === 'denuncias') checklistDenuncias = Array.from({length:20}, entradaVacia);
+  else checklistEvidencias = Array.from({length:20}, entradaVacia);
+  renderGridChecks(tipo);
   await guardarChecklistDenuncias();
   showToast('Casillas reiniciadas');
 }
@@ -2044,30 +2079,42 @@ async function reiniciarChecklistDenuncias(){
 async function guardarChecklistDenuncias(){
   try{
     await db.collection('denunciasChecklist').doc(checklistAgenteActual).set({
-      checks: checklistActual,
+      denuncias: checklistDenuncias,
+      evidencias: checklistEvidencias,
       actualizadoPor: usuarioActual?.global_name || 'Desconocido',
       actualizado: Date.now()
     });
     const agente = agentes.find(a=>a.id===checklistAgenteActual);
-    const validas = checklistActual.filter(e=>e.estado===true).length;
-    const malas = checklistActual.filter(e=>e.estado===false).length;
-    registrarAuditoria(`Actualizó el checklist de denuncias/evidencias de ${agente? agente.nombre : checklistAgenteActual} (${validas} válidas, ${malas} rechazadas)`);
+    const validasD = checklistDenuncias.filter(e=>e.estado===true).length;
+    const validasE = checklistEvidencias.filter(e=>e.estado===true).length;
+    registrarAuditoria(`Actualizó el checklist de ${agente? agente.nombre : checklistAgenteActual} (${validasD} denuncias válidas, ${validasE} evidencias válidas)`);
   }catch(e){ showToast('Error al guardar el checklist'); }
 }
 
 function denunciasValidadas(agente){
-  const checks = (denunciasChecklists[agente.id] || []).map(normalizarEntrada);
-  return checks.filter(e=>e.estado===true).length;
+  const datos = denunciasChecklists[agente.id];
+  if(!datos) return 0;
+  const d = normalizarLista(datos.denuncias).filter(e=>e.estado===true).length;
+  const e = normalizarLista(datos.evidencias).filter(e=>e.estado===true).length;
+  return d + e;
 }
 
 function renderDenunciasStats(){
   const statTotal = document.getElementById('stat-denuncias-total');
   const statAgentes = document.getElementById('stat-denuncias-agentes');
   const statCompletos = document.getElementById('stat-denuncias-completos');
-  const entradas = Object.values(denunciasChecklists).map(checks => checks.map(normalizarEntrada));
-  const total = entradas.reduce((acc, checks)=> acc + checks.filter(e=>e.estado===true).length, 0);
-  const iniciados = entradas.filter(checks => checks.some(e=>e.estado!==null || (e.numero && e.numero.trim()))).length;
-  const completos = entradas.filter(checks => checks.filter(e=>e.estado===true).length >= 20).length;
+  const entradas = Object.values(denunciasChecklists).map(datos => ({
+    denuncias: normalizarLista(datos.denuncias),
+    evidencias: normalizarLista(datos.evidencias),
+  }));
+  const total = entradas.reduce((acc, x)=> acc + x.denuncias.filter(e=>e.estado===true).length + x.evidencias.filter(e=>e.estado===true).length, 0);
+  const iniciados = entradas.filter(x =>
+    x.denuncias.some(e=>e.estado!==null || (e.numero && e.numero.trim())) ||
+    x.evidencias.some(e=>e.estado!==null || (e.numero && e.numero.trim()))
+  ).length;
+  const completos = entradas.filter(x =>
+    x.denuncias.filter(e=>e.estado===true).length >= 20 && x.evidencias.filter(e=>e.estado===true).length >= 20
+  ).length;
   if(statTotal) statTotal.textContent = total;
   if(statAgentes) statAgentes.textContent = iniciados;
   if(statCompletos) statCompletos.textContent = completos;
@@ -2075,13 +2122,41 @@ function renderDenunciasStats(){
   const selAgente = document.getElementById('de-agente-select');
   if(selAgente){
     const actual = selAgente.value;
-    const opts = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}))
+    const termino = (document.getElementById('buscar-agente-denuncia')?.value || '').trim().toLowerCase();
+    const soloIniciados = document.getElementById('solo-iniciados-denuncia')?.checked;
+
+    let lista = [...agentes];
+    if(termino){
+      lista = lista.filter(a =>
+        (a.nombre||'').toLowerCase().includes(termino) ||
+        (a.placa||'').toLowerCase().includes(termino)
+      );
+    }
+    if(soloIniciados){
+      lista = lista.filter(a => {
+        const datos = denunciasChecklists[a.id];
+        if(!datos) return false;
+        const d = normalizarLista(datos.denuncias);
+        const e = normalizarLista(datos.evidencias);
+        return d.some(x=>x.estado!==null || (x.numero && x.numero.trim())) || e.some(x=>x.estado!==null || (x.numero && x.numero.trim()));
+      });
+    }
+
+    const opts = lista.sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}))
       .map(a=>{
-        const n = (denunciasChecklists[a.id]||[]).map(normalizarEntrada).filter(e=>e.estado===true).length;
-        return `<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre} (${n}/20)</option>`;
+        const datos = denunciasChecklists[a.id];
+        const n = datos ? (normalizarLista(datos.denuncias).filter(e=>e.estado===true).length + normalizarLista(datos.evidencias).filter(e=>e.estado===true).length) : 0;
+        return `<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre} (${n}/40)</option>`;
       }).join('');
-    selAgente.innerHTML = agentes.length ? `<option value="">Selecciona un agente...</option>${opts}` : '<option value="">Registra un agente primero</option>';
-    if(actual) selAgente.value = actual;
+
+    if(!agentes.length){
+      selAgente.innerHTML = '<option value="">Registra un agente primero</option>';
+    }else if(!lista.length){
+      selAgente.innerHTML = '<option value="">Ningún agente coincide con el filtro</option>';
+    }else{
+      selAgente.innerHTML = `<option value="">Selecciona un agente...</option>${opts}`;
+      if(actual && lista.some(a=>a.id===actual)) selAgente.value = actual;
+    }
   }
 }
 
