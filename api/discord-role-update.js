@@ -8,10 +8,10 @@ export default async function handler(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch (e) { body = {}; }
   }
-  const { discordUserId, rolAnteriorId, rolNuevoId } = body || {};
+  const { discordUserId, rolAnteriorId, rolNuevoId, rolBaseId, soloRoles } = body || {};
 
-  if (!discordUserId || (!rolAnteriorId && !rolNuevoId)) {
-    res.status(400).json({ error: 'Faltan datos (discordUserId y al menos un rol a agregar o quitar)' });
+  if (!discordUserId || (!rolAnteriorId && !rolNuevoId && !rolBaseId && !soloRoles)) {
+    res.status(400).json({ error: 'Faltan datos (discordUserId y al menos un rol a agregar, quitar, o soloRoles)' });
     return;
   }
 
@@ -19,9 +19,25 @@ export default async function handler(req, res) {
   const botToken = process.env.DISCORD_BOT_TOKEN;
   const headers = { Authorization: `Bot ${botToken}` };
 
-  const resultado = { agregado: false, quitado: false, errores: [] };
+  const resultado = { agregado: false, agregadoBase: false, quitado: false, reemplazado: false, errores: [] };
 
   try {
+    // Modo "expulsión": reemplaza TODOS los roles del miembro por únicamente los indicados
+    if (soloRoles) {
+      const patchRes = await fetch(
+        `https://discord.com/api/guilds/${guildId}/members/${discordUserId}`,
+        { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ roles: soloRoles }) }
+      );
+      if (patchRes.ok) {
+        resultado.reemplazado = true;
+      } else {
+        const errText = await patchRes.text();
+        resultado.errores.push(`No se pudieron reemplazar los roles (código ${patchRes.status}): ${errText}`);
+      }
+      res.status(200).json(resultado);
+      return;
+    }
+
     // Agregar el nuevo rol, si se pidió
     if (rolNuevoId) {
       const addRes = await fetch(
@@ -36,8 +52,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // Quitar el rol anterior, si aplica y es distinto del nuevo
-    if (rolAnteriorId && rolAnteriorId !== rolNuevoId) {
+    // Agregar el rol base (ej. "Policía"), si se pidió — nunca se quita, siempre se asegura que lo tenga
+    if (rolBaseId && rolBaseId !== rolNuevoId) {
+      const baseRes = await fetch(
+        `https://discord.com/api/guilds/${guildId}/members/${discordUserId}/roles/${rolBaseId}`,
+        { method: 'PUT', headers }
+      );
+      if (baseRes.ok) {
+        resultado.agregadoBase = true;
+      } else {
+        const errText = await baseRes.text();
+        resultado.errores.push(`No se pudo agregar el rol base (código ${baseRes.status}): ${errText}`);
+      }
+    }
+
+    // Quitar el rol anterior, si aplica y es distinto del nuevo o del base
+    if (rolAnteriorId && rolAnteriorId !== rolNuevoId && rolAnteriorId !== rolBaseId) {
       const removeRes = await fetch(
         `https://discord.com/api/guilds/${guildId}/members/${discordUserId}/roles/${rolAnteriorId}`,
         { method: 'DELETE', headers }
