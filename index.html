@@ -313,6 +313,63 @@
         <div class="stamp">ACTUALIZADO<br><span id="fecha-actual"></span></div>
       </header>
 
+      <div class="grid-cards" style="grid-template-columns: repeat(6, 1fr); margin-bottom:24px;">
+        <div class="card">
+          <div class="label">Oficiales en servicio</div>
+          <div class="value" id="stat-en-servicio-panel" style="font-size:26px;">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Oficiales activos</div>
+          <div class="value" id="stat-oficiales-activos" style="font-size:26px;">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Bitácoras semanales</div>
+          <div class="value" id="stat-bitacoras-semana" style="font-size:26px;">0</div>
+        </div>
+        <div class="card alert">
+          <div class="label">Ausentes semanales</div>
+          <div class="value" id="stat-ausentes-semana" style="font-size:26px;">0</div>
+        </div>
+        <div class="card alert">
+          <div class="label">Sanciones activas</div>
+          <div class="value" id="stat-sanciones-panel" style="font-size:26px;">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Ingresos pendientes</div>
+          <div class="value" id="stat-ingresos-panel" style="font-size:26px;">0</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleAnuncios()">
+          <div>
+            <h3 style="margin-bottom:2px;">📢 Gestión de Anuncios</h3>
+            <p style="color:var(--paper-dim); font-size:11.5px;">Publica avisos globales visibles para todo el DAI</p>
+          </div>
+          <span id="flecha-anuncios" style="color:var(--brass); font-size:14px;">▾</span>
+        </div>
+        <div id="bloque-anuncios" style="margin-top:16px;">
+          <div class="form-grid" style="margin-bottom:14px;">
+            <div class="field" style="grid-column: span 3;"><textarea id="anuncio-texto" placeholder="Escribe el anuncio para todo el equipo..." style="min-height:60px;"></textarea></div>
+            <div class="field"><button class="btn" onclick="publicarAnuncio()">Publicar anuncio</button></div>
+          </div>
+          <div id="lista-anuncios"></div>
+        </div>
+      </div>
+
+      <div class="grid-cards" style="grid-template-columns: 2fr 1fr; margin-bottom:24px; align-items:start;">
+        <div class="panel" style="margin-bottom:0;">
+          <h3>Actividad reciente</h3>
+          <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:12px;">Últimos eventos de servicio</p>
+          <div id="actividad-turnos-panel"></div>
+        </div>
+        <div class="panel" style="margin-bottom:0;">
+          <h3>Alertas de ascenso</h3>
+          <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:12px;">Oficiales que cumplen los días requeridos</p>
+          <div id="alertas-ascenso-panel"></div>
+        </div>
+      </div>
+
       <div class="form-grid" style="margin-bottom:20px;">
         <div class="field">
           <label>Filtrar por sub-división</label>
@@ -860,6 +917,11 @@
         No encontramos un agente registrado con tu cuenta de Discord. Contacta a Asuntos Internos para que verifiquen tu registro.
       </div>
 
+      <div class="panel" id="panel-anuncios-policia" style="display:none;">
+        <h3>📢 Anuncios del DAI</h3>
+        <div id="policia-anuncios" style="margin-top:12px;"></div>
+      </div>
+
       <div class="panel" id="panel-control-turno" style="display:none;">
         <h3>Control de turno</h3>
         <div id="turno-estado"></div>
@@ -1038,6 +1100,7 @@ let bitacoras = [];
 let sanciones = [];
 let bonos = [];
 let ausencias = [];
+let anuncios = [];
 let historialRangos = [];
 let canalStrikesId = '';
 let canalWarningsId = '';
@@ -1119,6 +1182,12 @@ function initListeners(){
   db.collection('ausencias').onSnapshot(snap=>{
     ausencias = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAusenciasTabla();
+    renderPanel();
+  }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('anuncios').onSnapshot(snap=>{
+    anuncios = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderAnuncios();
   }, ()=>showToast('Error de conexión con la base de datos'));
 
   db.collection('denunciasChecklist').onSnapshot(snap=>{
@@ -2259,7 +2328,128 @@ function renderGraficaBitacoras(lista){
   <div style="font-size:10.5px; color:var(--steel-600); margin-top:6px; text-align:right;">Número de semana del año</div>`;
 }
 
+function tiempoRelativo(ts){
+  if(!ts) return '—';
+  const diffMs = Date.now() - ts;
+  const min = Math.floor(diffMs / 60000);
+  if(min < 1) return 'Ahora mismo';
+  if(min < 60) return `Hace ${min}m`;
+  const horas = Math.floor(min / 60);
+  if(horas < 24) return `Hace ${horas}h`;
+  const dias = Math.floor(horas / 24);
+  return `Hace ${dias}d`;
+}
+
+async function publicarAnuncio(){
+  const texto = document.getElementById('anuncio-texto').value.trim();
+  if(!texto){ showToast('Escribe el anuncio'); return; }
+  try{
+    await db.collection('anuncios').doc(uid()).set({
+      texto, autor: usuarioActual?.global_name || 'Desconocido', creado: Date.now()
+    });
+    registrarAuditoria('Publicó un anuncio para el DAI');
+    document.getElementById('anuncio-texto').value = '';
+    showToast('Anuncio publicado');
+  }catch(e){ showToast('Error al publicar el anuncio'); }
+}
+
+async function eliminarAnuncio(id){
+  if(!confirm('¿Eliminar este anuncio?')) return;
+  try{
+    await db.collection('anuncios').doc(id).delete();
+    registrarAuditoria('Eliminó un anuncio');
+  }catch(e){ showToast('Error al eliminar'); }
+}
+
+function renderAnuncios(){
+  const el = document.getElementById('lista-anuncios');
+  if(!el) return;
+  const recientes = anuncios.slice(0,5);
+  el.innerHTML = recientes.length ? recientes.map(a=>`
+    <div style="padding:12px 0; border-bottom:1px solid var(--navy-700); display:flex; justify-content:space-between; gap:12px;">
+      <div>
+        <div style="font-size:13px; white-space:pre-wrap;">${a.texto}</div>
+        <div style="font-size:10.5px; color:var(--paper-dim); margin-top:4px;">${a.autor||'—'} · ${tiempoRelativo(a.creado)}</div>
+      </div>
+      <button class="icon-btn" onclick="eliminarAnuncio('${a.id}')">Eliminar</button>
+    </div>`).join('') : '<div class="empty">No hay anuncios publicados todavía.</div>';
+}
+
+function toggleAnuncios(){
+  const bloque = document.getElementById('bloque-anuncios');
+  const flecha = document.getElementById('flecha-anuncios');
+  const visible = bloque.style.display !== 'none';
+  bloque.style.display = visible ? 'none' : 'block';
+  flecha.textContent = visible ? '▸' : '▾';
+}
+
+function renderDashboardTarjetas(){
+  const enServicio = bitacoras.filter(b=>b.estadoTurno==='activo').length;
+  const activos = agentes.filter(a=>a.estado==='activo').length;
+  const pendientesIngreso = agentes.filter(a=>a.estado==='pendiente').length;
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const haceSieteDias = new Date(hoy); haceSieteDias.setDate(haceSieteDias.getDate()-7);
+  const haceSieteDiasStr = haceSieteDias.toISOString().slice(0,10);
+
+  const bitacorasSemana = bitacoras.filter(b=>b.fecha && b.fecha >= haceSieteDiasStr).length;
+  const ausentesSemana = ausencias.filter(a=>{
+    if(!a.desde) return false;
+    return a.desde >= haceSieteDiasStr || (a.hasta && a.hasta >= haceSieteDiasStr && a.desde <= new Date().toISOString().slice(0,10));
+  }).length;
+
+  const elEnServicio = document.getElementById('stat-en-servicio-panel');
+  const elActivos = document.getElementById('stat-oficiales-activos');
+  const elBitSemana = document.getElementById('stat-bitacoras-semana');
+  const elAusentes = document.getElementById('stat-ausentes-semana');
+  const elSanciones = document.getElementById('stat-sanciones-panel');
+  const elIngresos = document.getElementById('stat-ingresos-panel');
+  if(elEnServicio) elEnServicio.textContent = enServicio;
+  if(elActivos) elActivos.textContent = activos;
+  if(elBitSemana) elBitSemana.textContent = bitacorasSemana;
+  if(elAusentes) elAusentes.textContent = ausentesSemana;
+  if(elSanciones) elSanciones.textContent = sanciones.length;
+  if(elIngresos) elIngresos.textContent = pendientesIngreso;
+}
+
+function renderActividadTurnosPanel(){
+  const el = document.getElementById('actividad-turnos-panel');
+  if(!el) return;
+  const eventos = [];
+  bitacoras.forEach(b=>{
+    if(b.entradaTs) eventos.push({ ts: b.entradaTs, texto: `${nombreAgente(b.agenteId)} inició turno` });
+    if(b.salidaTs) eventos.push({ ts: b.salidaTs, texto: `${nombreAgente(b.agenteId)} finalizó turno` });
+  });
+  eventos.sort((a,b)=> b.ts - a.ts);
+  const recientes = eventos.slice(0,6);
+  el.innerHTML = recientes.length ? recientes.map(e=>`
+    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--navy-800); font-size:12.5px;">
+      <span>${e.texto}</span>
+      <span class="mono" style="color:var(--paper-dim); font-size:11px;">${tiempoRelativo(e.ts)}</span>
+    </div>`).join('') : '<div class="empty">Sin actividad reciente.</div>';
+}
+
+function renderAlertasAscensoPanel(){
+  const el = document.getElementById('alertas-ascenso-panel');
+  if(!el) return;
+  const activos = agentes.filter(a=>a.estado==='activo');
+  const elegibles = activos.filter(a=>{
+    const requisito = requisitosAscenso[a.rango] || 0;
+    if(requisito <= 0) return false;
+    const dias = diasEnRango(a);
+    return dias !== null && dias >= requisito;
+  });
+  el.innerHTML = elegibles.length ? elegibles.map(a=>`
+    <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--navy-800); font-size:12.5px;">
+      <span class="pill activo" style="padding:2px 8px; font-size:9.5px;">●</span>
+      ${iconoRango(a.rango)} ${a.nombre}
+    </div>`).join('') : '<div class="empty" style="padding:16px 0;">No hay oficiales elegibles para ascenso hoy.</div>';
+}
+
 function renderPanel(){
+  renderDashboardTarjetas();
+  renderActividadTurnosPanel();
+  renderAlertasAscensoPanel();
   renderFiltrosPanel();
   const agFilt = agentesFiltrados();
   const biFilt = bitacorasFiltradas();
@@ -2416,6 +2606,12 @@ async function initListenersPolicia(){
     renderPoliciaInfo(agente);
     document.getElementById('panel-control-turno').style.display = 'block';
     document.getElementById('panel-registrar-ausencia').style.display = 'block';
+    document.getElementById('panel-anuncios-policia').style.display = 'block';
+
+    db.collection('anuncios').onSnapshot(s=>{
+      const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+      renderPoliciaAnuncios(lista);
+    });
 
     db.collection('bitacoras').where('agenteId','==', agente.id).onSnapshot(s=>{
       const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
@@ -2456,6 +2652,17 @@ async function registrarMiAusencia(){
     document.getElementById('mi-au-motivo').value = '';
     showToast('Ausencia registrada');
   }catch(e){ showToast('Error al registrar la ausencia'); }
+}
+
+function renderPoliciaAnuncios(lista){
+  const el = document.getElementById('policia-anuncios');
+  if(!el) return;
+  const recientes = lista.slice(0,5);
+  el.innerHTML = recientes.length ? recientes.map(a=>`
+    <div style="padding:12px 0; border-bottom:1px solid var(--navy-700);">
+      <div style="font-size:13px; white-space:pre-wrap;">${a.texto}</div>
+      <div style="font-size:10.5px; color:var(--paper-dim); margin-top:4px;">${a.autor||'—'} · ${tiempoRelativo(a.creado)}</div>
+    </div>`).join('') : '<div class="empty">No hay anuncios por ahora.</div>';
 }
 
 function renderPoliciaAusencias(lista){
