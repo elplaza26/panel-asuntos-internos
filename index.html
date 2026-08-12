@@ -1239,34 +1239,58 @@ function renderPendientesIngreso(){
   if(!el) return;
   const pendientes = agentes.filter(a=>a.estado==='pendiente');
   if(!pendientes.length){ el.innerHTML = '<div class="empty">No hay solicitudes de ingreso pendientes.</div>'; return; }
-  el.innerHTML = `<table><thead><tr>
-    <th>Nombre IC</th><th>Nombre OOC</th><th>Placa</th><th>Discord</th><th>Nota</th><th>Fecha</th><th></th>
-  </tr></thead><tbody>
-  ${pendientes.map(a=>`
-    <tr>
-      <td>${a.nombre}</td>
-      <td>${a.nombreOOC||'—'}</td>
-      <td class="mono">${a.placa||'—'}</td>
-      <td class="mono">${a.discord||'—'}</td>
-      <td>${a.notas||'—'}</td>
-      <td class="mono">${a.creado? fmtHora(a.creado) : '—'}</td>
-      <td class="row-actions">
-        <button class="btn" style="padding:6px 14px; font-size:11px;" onclick="aprobarIngreso('${a.id}')">Aprobar</button>
-        <button class="icon-btn" onclick="rechazarIngreso('${a.id}')">Rechazar</button>
-      </td>
-    </tr>`).join('')}
-  </tbody></table>`;
+
+  el.innerHTML = pendientes.map(a=>`
+    <div class="panel" style="margin-bottom:12px; padding:16px 18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; cursor:pointer;" onclick="toggleDetalleIngreso('${a.id}')">
+        <div>
+          <div style="font-family:var(--font-display); font-size:15.5px; display:flex; align-items:center; gap:10px;">
+            ${a.nombre}
+            <span class="pill pendiente">Pendiente</span>
+          </div>
+          <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">
+            Postulado por ${a.nombreOOC||'—'} · ${a.creado? fmtHora(a.creado) : '—'}
+          </div>
+        </div>
+        <div class="row-actions" onclick="event.stopPropagation()">
+          <button class="btn" style="padding:8px 16px; font-size:11.5px;" onclick="aprobarIngreso('${a.id}')">Aprobar y asignar placa</button>
+          <button class="btn danger" style="padding:8px 16px; font-size:11.5px;" onclick="rechazarIngreso('${a.id}')">Rechazar</button>
+        </div>
+      </div>
+      <div id="detalle-ingreso-${a.id}" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid var(--navy-700); grid-template-columns: repeat(3, 1fr); gap:16px;">
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Placa solicitada</div><div class="mono">${a.placa||'Sin asignar'}</div></div>
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Discord ID</div><div class="mono">${a.discord||'—'}</div></div>
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Nota</div><div>${a.notas||'—'}</div></div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleDetalleIngreso(id){
+  const el = document.getElementById('detalle-ingreso-'+id);
+  if(!el) return;
+  const visible = el.style.display === 'grid';
+  el.style.display = visible ? 'none' : 'grid';
 }
 
 async function aprobarIngreso(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
-  if(!confirm(`¿Aprobar el ingreso de ${ag.nombre}? Quedará activo y se le asignará el rol de Discord de "${ag.rango||'Cadete'}".`)) return;
+
+  let placaFinal = ag.placa || '';
+  if(!placaFinal){
+    const respuesta = window.prompt(`Asigna un número de placa para ${ag.nombre} (déjalo vacío si no aplica):`, '');
+    if(respuesta === null) return; // canceló el prompt
+    placaFinal = respuesta.trim();
+  }
+
+  if(!confirm(`¿Aprobar el ingreso de ${ag.nombre}${placaFinal? ' con placa #'+placaFinal:''}? Quedará activo y se le asignará el rol de Discord de "${ag.rango||'Cadete'}".`)) return;
   try{
-    await db.collection('agentes').doc(id).update({ estado: 'activo' });
-    registrarAuditoria(`Aprobó el ingreso de ${ag.nombre}`);
+    const datosActualizar = { estado: 'activo' };
+    if(placaFinal) datosActualizar.placa = placaFinal;
+    await db.collection('agentes').doc(id).update(datosActualizar);
+    registrarAuditoria(`Aprobó el ingreso de ${ag.nombre}${placaFinal? ' (placa #'+placaFinal+')':''}`);
     const resultado = await sincronizarRolDiscord(ag.discord, null, ag.rango || 'Cadete');
-    sincronizarApodoDiscord(ag.discord, ag.rango || 'Cadete', ag.nombre, ag.placa);
+    sincronizarApodoDiscord(ag.discord, ag.rango || 'Cadete', ag.nombre, placaFinal || ag.placa);
     if(resultado.omitido){
       showToast(`${ag.nombre} aprobado (Discord no se actualizó: ${resultado.razon})`);
     }else if(resultado.errores && resultado.errores.length){
