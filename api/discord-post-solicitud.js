@@ -18,11 +18,12 @@ export default async function handler(req, res) {
     embeds: [{
       title: '📝 Solicitud de Ingreso al Cuerpo',
       description:
-        '¿Quieres unirte a la corporación? Completa el formulario para dejar tu solicitud registrada.\n\n' +
-        '**Cómo funciona:**\n' +
-        '1. Presiona **Postularme al cuerpo** y llena tus datos.\n' +
-        '2. Tu solicitud queda pendiente de revisión por Asuntos Internos.\n' +
-        '3. En cuanto te aprueben, tu rol se activa automáticamente.',
+        'Este formulario es exclusivo para aspirantes **ya preseleccionados** por Asuntos Internos — si todavía no pasaste ese filtro, el botón no te va a dejar continuar.\n\n' +
+        '**Pasos a seguir:**\n' +
+        '1. Presiona **Postularme al cuerpo**.\n' +
+        '2. Completa tus datos en el formulario.\n' +
+        '3. Tu solicitud queda pendiente de revisión.\n' +
+        '4. En cuanto te aprueben, tu rol se activa automáticamente.',
       color: 3066993,
       footer: { text: 'DAI Rebelión · Sistema de reclutamiento' },
     }],
