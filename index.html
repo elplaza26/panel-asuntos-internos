@@ -289,11 +289,12 @@
       <button class="nav-btn" data-view="agentes"><span class="n">02</span> Agentes</button>
       <button class="nav-btn" data-view="bitacoras"><span class="n">03</span> Bitácoras</button>
       <button class="nav-btn" data-view="sanciones"><span class="n">04</span> Sanciones</button>
-      <button class="nav-btn" data-view="bonos"><span class="n">05</span> Bonos</button>
-      <button class="nav-btn" data-view="ascensos"><span class="n">06</span> Ascensos</button>
-      <button class="nav-btn" data-view="ingresos"><span class="n">07</span> Nuevos Ingresos</button>
-      <button class="nav-btn" data-view="ausencias"><span class="n">08</span> Ausencias</button>
-      <button class="nav-btn" id="nav-historial" data-view="historial" style="display:none;"><span class="n">09</span> Historial</button>
+      <button class="nav-btn" data-view="denuncias"><span class="n">05</span> Denuncias</button>
+      <button class="nav-btn" data-view="bonos"><span class="n">06</span> Bonos</button>
+      <button class="nav-btn" data-view="ascensos"><span class="n">07</span> Ascensos</button>
+      <button class="nav-btn" data-view="ingresos"><span class="n">08</span> Nuevos Ingresos</button>
+      <button class="nav-btn" data-view="ausencias"><span class="n">09</span> Ausencias</button>
+      <button class="nav-btn" id="nav-historial" data-view="historial" style="display:none;"><span class="n">10</span> Historial</button>
     </nav>
     <div class="sidebar-footer">
       <div id="usuario-actual" style="color:var(--paper); font-size:12.5px; margin-bottom:8px; display:flex; align-items:center;"></div>
@@ -588,6 +589,47 @@
       </div>
 
       <div id="tabla-sanciones"></div>
+    </section>
+
+    <!-- DENUNCIAS -->
+    <section class="view" id="view-denuncias">
+      <header class="top">
+        <h2>Denuncias</h2>
+        <div class="stamp">CHECKLIST DE<br>EVIDENCIA</div>
+      </header>
+
+      <div class="grid-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom:24px;">
+        <div class="card">
+          <div class="label">Total validadas (todos los agentes)</div>
+          <div class="value" id="stat-denuncias-total">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Agentes con checklist iniciado</div>
+          <div class="value" id="stat-denuncias-agentes">0</div>
+        </div>
+        <div class="card alert">
+          <div class="label">Agentes en 20/20</div>
+          <div class="value" id="stat-denuncias-completos">0</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Selecciona un agente</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
+          Cada agente puede acumular hasta <strong>20 denuncias/evidencias validadas</strong>. Marca la casilla conforme confirmes que la evidencia está en orden — no hace falta subir ningún archivo, es solo un check.
+        </p>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 3;">
+            <select id="de-agente-select" onchange="cargarChecklistDenuncias()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-checklist-denuncias" style="display:none;">
+        <h3>Denuncias/evidencias validadas — <span id="de-nombre-agente"></span></h3>
+        <div id="grid-checks" style="display:grid; grid-template-columns: repeat(10, 1fr); gap:8px; margin:16px 0;"></div>
+        <div class="mono" style="color:var(--brass); font-size:13px;"><span id="conteo-checks">0</span> / 20 validadas</div>
+      </div>
     </section>
 
     <!-- BONOS -->
@@ -1052,6 +1094,18 @@ function initListeners(){
   db.collection('ausencias').onSnapshot(snap=>{
     ausencias = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAusenciasTabla();
+  }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('denunciasChecklist').onSnapshot(snap=>{
+    denunciasChecklists = {};
+    snap.docs.forEach(d=>{ denunciasChecklists[d.id] = d.data().checks || []; });
+    renderDenunciasStats();
+    renderAscensos();
+    if(checklistAgenteActual && denunciasChecklists[checklistAgenteActual]){
+      checklistActual = denunciasChecklists[checklistAgenteActual].slice(0,20);
+      while(checklistActual.length < 20) checklistActual.push(false);
+      renderGridChecks();
+    }
   }, ()=>showToast('Error de conexión con la base de datos'));
 
   db.collection('auditoria').onSnapshot(snap=>{
@@ -1817,6 +1871,81 @@ function renderAusenciasTabla(){
   </tbody></table>`;
 }
 
+let denunciasChecklists = {}; // { agenteId: [bool x20] }
+let checklistAgenteActual = null;
+let checklistActual = new Array(20).fill(false);
+
+function cargarChecklistDenuncias(){
+  const agenteId = document.getElementById('de-agente-select').value;
+  const panel = document.getElementById('panel-checklist-denuncias');
+  if(!agenteId){ panel.style.display = 'none'; checklistAgenteActual = null; return; }
+  checklistAgenteActual = agenteId;
+  const agente = agentes.find(a=>a.id===agenteId);
+  document.getElementById('de-nombre-agente').textContent = agente ? `${agente.placa? '#'+agente.placa+' — ':''}${agente.nombre}` : '';
+  checklistActual = (denunciasChecklists[agenteId] || new Array(20).fill(false)).slice(0, 20);
+  while(checklistActual.length < 20) checklistActual.push(false);
+  panel.style.display = 'block';
+  renderGridChecks();
+}
+
+function renderGridChecks(){
+  const el = document.getElementById('grid-checks');
+  if(!el) return;
+  el.innerHTML = checklistActual.map((val, i)=>`
+    <label style="display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; padding:10px 4px; background:${val? 'rgba(201,162,39,0.12)' : 'var(--navy-950)'}; border:1px solid ${val? 'var(--brass-dim)' : 'var(--navy-700)'}; border-radius:6px;">
+      <input type="checkbox" ${val?'checked':''} onchange="toggleCheckDenuncia(${i})" style="width:17px; height:17px; accent-color:var(--brass);">
+      <span class="mono" style="font-size:10px; color:var(--paper-dim);">${i+1}</span>
+    </label>`).join('');
+  const total = checklistActual.filter(Boolean).length;
+  const conteo = document.getElementById('conteo-checks');
+  if(conteo) conteo.textContent = total;
+}
+
+async function toggleCheckDenuncia(index){
+  if(!checklistAgenteActual) return;
+  checklistActual[index] = !checklistActual[index];
+  renderGridChecks();
+  try{
+    await db.collection('denunciasChecklist').doc(checklistAgenteActual).set({
+      checks: checklistActual,
+      actualizadoPor: usuarioActual?.global_name || 'Desconocido',
+      actualizado: Date.now()
+    });
+    const agente = agentes.find(a=>a.id===checklistAgenteActual);
+    registrarAuditoria(`Actualizó el checklist de denuncias/evidencias de ${agente? agente.nombre : checklistAgenteActual} (${checklistActual.filter(Boolean).length}/20)`);
+  }catch(e){ showToast('Error al guardar el checklist'); }
+}
+
+function denunciasValidadas(agente){
+  const checks = denunciasChecklists[agente.id] || [];
+  return checks.filter(Boolean).length;
+}
+
+function renderDenunciasStats(){
+  const statTotal = document.getElementById('stat-denuncias-total');
+  const statAgentes = document.getElementById('stat-denuncias-agentes');
+  const statCompletos = document.getElementById('stat-denuncias-completos');
+  const entradas = Object.values(denunciasChecklists);
+  const total = entradas.reduce((acc, checks)=> acc + checks.filter(Boolean).length, 0);
+  const iniciados = entradas.filter(checks => checks.some(Boolean)).length;
+  const completos = entradas.filter(checks => checks.filter(Boolean).length >= 20).length;
+  if(statTotal) statTotal.textContent = total;
+  if(statAgentes) statAgentes.textContent = iniciados;
+  if(statCompletos) statCompletos.textContent = completos;
+
+  const selAgente = document.getElementById('de-agente-select');
+  if(selAgente){
+    const actual = selAgente.value;
+    const opts = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}))
+      .map(a=>{
+        const n = (denunciasChecklists[a.id]||[]).filter(Boolean).length;
+        return `<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre} (${n}/20)</option>`;
+      }).join('');
+    selAgente.innerHTML = agentes.length ? `<option value="">Selecciona un agente...</option>${opts}` : '<option value="">Registra un agente primero</option>';
+    if(actual) selAgente.value = actual;
+  }
+}
+
 function renderHistorialRangos(){
   const el = document.getElementById('tabla-historial-rangos');
   if(!el) return;
@@ -2177,6 +2306,7 @@ function renderAll(){
   renderPendientesIngreso();
   renderBitacorasTabla();
   renderSancionesTabla();
+  renderDenunciasStats();
   renderBonosTabla();
   renderPanel();
   renderAscensos();
@@ -2199,6 +2329,7 @@ document.getElementById('sa-fecha').valueAsDate = new Date();
 document.getElementById('bo-fecha').valueAsDate = new Date();
 document.getElementById('asc-fecha').valueAsDate = new Date();
 document.getElementById('au-desde').valueAsDate = new Date();
+document.getElementById('de-fecha').valueAsDate = new Date();
 document.getElementById('mi-au-desde').valueAsDate = new Date();
 actualizarTipoPeriodo();
 
@@ -2517,14 +2648,15 @@ function renderAscensos(){
     const requisito = requisitosAscenso[a.rango] || 0;
     const dias = diasEnRango(a);
     const bitacorasMarcadas = bitacorasDesdeAscenso(a);
-    return { agente:a, requisito, dias, bitacorasMarcadas };
+    const denunciasVal = denunciasValidadas(a);
+    return { agente:a, requisito, dias, bitacorasMarcadas, denunciasVal };
   }).filter(x => x.requisito > 0 && x.dias !== null);
 
   const elegibles = conDatos.filter(x=> x.dias >= x.requisito).sort((a,b)=> b.dias - a.dias);
   const enProgreso = conDatos.filter(x=> x.dias < x.requisito).sort((a,b)=> b.dias - a.dias);
 
   elElegibles.innerHTML = elegibles.length ? `<table><thead><tr>
-    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Requeridos</th><th></th>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Denuncias validadas</th><th>Requeridos</th><th></th>
   </tr></thead><tbody>
   ${elegibles.map(x=>`
     <tr>
@@ -2533,13 +2665,14 @@ function renderAscensos(){
       <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
       <td class="mono"><span class="pill activo">${x.dias}d</span></td>
       <td class="mono">${x.bitacorasMarcadas}</td>
+      <td class="mono">${x.denunciasVal}</td>
       <td class="mono">${x.requisito}d</td>
       <td class="row-actions"><button class="btn" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Ascender</button></td>
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">Nadie cumple los días requeridos todavía.</div>';
 
   elProgreso.innerHTML = enProgreso.length ? `<table><thead><tr>
-    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Requeridos</th><th>Progreso</th><th></th>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días en rango</th><th>Bitácoras marcadas</th><th>Denuncias validadas</th><th>Requeridos</th><th>Progreso</th><th></th>
   </tr></thead><tbody>
   ${enProgreso.map(x=>{
     const pct = Math.min(100, Math.round((x.dias / x.requisito) * 100));
@@ -2550,6 +2683,7 @@ function renderAscensos(){
       <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
       <td class="mono">${x.dias}d</td>
       <td class="mono">${x.bitacorasMarcadas}</td>
+      <td class="mono">${x.denunciasVal}</td>
       <td class="mono">${x.requisito}d</td>
       <td style="min-width:110px;">
         <div style="background:var(--navy-800); border:1px solid var(--navy-700); border-radius:20px; height:8px; overflow:hidden;">
