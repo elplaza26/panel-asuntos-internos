@@ -291,6 +291,7 @@
       <button class="nav-btn" data-view="sanciones"><span class="n">04</span> Sanciones</button>
       <button class="nav-btn" data-view="bonos"><span class="n">05</span> Bonos</button>
       <button class="nav-btn" data-view="ascensos"><span class="n">06</span> Ascensos</button>
+      <button class="nav-btn" data-view="ingresos"><span class="n">07</span> Nuevos Ingresos</button>
     </nav>
     <div class="sidebar-footer">
       <div id="usuario-actual" style="color:var(--paper); font-size:12.5px; margin-bottom:8px; display:flex; align-items:center;"></div>
@@ -372,20 +373,6 @@
         <div class="stamp">EXPEDIENTES<br>DEL SERVIDOR</div>
       </header>
 
-      <div class="panel">
-        <h3>Publicar solicitud de ingreso en Discord</h3>
-        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
-          Publica el botón "Postularme al cuerpo" en tu canal de <strong>solicitud de rango</strong>. Quien lo use queda como pendiente en la sección de abajo hasta que lo apruebes.
-        </p>
-        <div class="form-grid">
-          <div class="field" style="grid-column: span 2;"><label>ID del canal "Solicitud de rango"</label><input id="discord-canal-solicitud-id" placeholder="Ej. 1234567890123456789"></div>
-          <div class="field"><button class="btn secondary" onclick="publicarSolicitudDiscord()">Publicar en Discord</button></div>
-        </div>
-      </div>
-
-      <div class="section-title">Solicitudes de ingreso pendientes</div>
-      <div id="tabla-pendientes-ingreso" style="margin-bottom:24px;"></div>
-
       <div class="panel" id="panel-form-agente">
         <h3 id="titulo-form-agente">Registrar nuevo agente</h3>
         <div class="form-grid">
@@ -404,11 +391,6 @@
                 <option value="Dev. Discord">Dev. Discord</option>
                 <option value="Staff">Staff</option>
                 <option value="Admin Staff Policial">Admin Staff Policial</option>
-              </optgroup>
-              <optgroup label="Divisiones">
-                <option value="DIRECTIVA">DIRECTIVA</option>
-                <option value="DAI">DAI</option>
-                <option value="CICPC">CICPC</option>
               </optgroup>
               <optgroup label="Comisarios">
                 <option value="Comisario Superior">Comisario Superior</option>
@@ -686,11 +668,6 @@
                 <option value="Staff">Staff</option>
                 <option value="Admin Staff Policial">Admin Staff Policial</option>
               </optgroup>
-              <optgroup label="Divisiones">
-                <option value="DIRECTIVA">DIRECTIVA</option>
-                <option value="DAI">DAI</option>
-                <option value="CICPC">CICPC</option>
-              </optgroup>
               <optgroup label="Comisarios">
                 <option value="Comisario Superior">Comisario Superior</option>
                 <option value="Comisario General">Comisario General</option>
@@ -730,7 +707,7 @@
         <button class="btn secondary" style="margin-top:14px;" onclick="guardarRequisitos()">Guardar requisitos</button>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-roles-discord-rango">
         <h3>Roles de Discord por rango</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
           Pega aquí el ID del rol de Discord que corresponde a cada rango. Cuando ejecutes un ascenso o cambies el rango de un agente, el sistema va a
@@ -753,6 +730,28 @@
 
       <div class="section-title">En progreso</div>
       <div id="tabla-en-progreso"></div>
+    </section>
+
+    <!-- NUEVOS INGRESOS -->
+    <section class="view" id="view-ingresos">
+      <header class="top">
+        <h2>Nuevos Ingresos</h2>
+        <div class="stamp">SOLICITUDES<br>DE RANGO</div>
+      </header>
+
+      <div class="panel">
+        <h3>Publicar solicitud de ingreso en Discord</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
+          Publica el botón "Postularme al cuerpo" en tu canal de <strong>solicitud de rango</strong>. Quien lo use queda como pendiente en la sección de abajo hasta que lo apruebes.
+        </p>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 2;"><label>ID del canal "Solicitud de rango"</label><input id="discord-canal-solicitud-id" placeholder="Ej. 1234567890123456789"></div>
+          <div class="field"><button class="btn secondary" onclick="publicarSolicitudDiscord()">Publicar en Discord</button></div>
+        </div>
+      </div>
+
+      <div class="section-title">Solicitudes de ingreso pendientes</div>
+      <div id="tabla-pendientes-ingreso"></div>
     </section>
 
   </main>
@@ -881,6 +880,13 @@ function mostrarApp(){
     if(badge){
       badge.innerHTML = `${usuarioActual.avatar ? `<img src="${usuarioActual.avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:8px;">` : ''}<span>${usuarioActual.global_name}</span>`;
     }
+    const esDirectiva = !!usuarioActual.esDirectiva;
+    const bloqueActividad = document.getElementById('bloque-actividad-reciente');
+    const panelRequisitos = document.getElementById('panel-requisitos-ascenso');
+    const panelRolesRango = document.getElementById('panel-roles-discord-rango');
+    if(bloqueActividad) bloqueActividad.style.display = esDirectiva ? 'block' : 'none';
+    if(panelRequisitos) panelRequisitos.style.display = esDirectiva ? 'block' : 'none';
+    if(panelRolesRango) panelRolesRango.style.display = esDirectiva ? 'block' : 'none';
     initListeners();
   }else{
     document.getElementById('app-policia').style.display = 'flex';
@@ -928,7 +934,6 @@ let rolesDiscordPorRango = {};
 
 const RANGOS_ORDEN = [
   'Director General','Sub Director','Jefe Departamento','Sub Jefe de Departamento','Dev. Discord','Staff','Admin Staff Policial',
-  'DIRECTIVA','DAI','CICPC',
   'Comisario Superior','Comisario General','Primer Comisario',
   'Comisionado Jefe','Comisionado',
   'Inspector Jefe','Inspector',
@@ -2193,6 +2198,10 @@ function renderRequisitosForm(){
 }
 
 async function guardarRequisitos(){
+  if(!usuarioActual || !usuarioActual.esDirectiva){
+    showToast('Solo Directiva puede modificar los requisitos de ascenso');
+    return;
+  }
   const inputs = document.querySelectorAll('.req-rango-input');
   const dias = {};
   inputs.forEach(inp=>{
@@ -2217,6 +2226,10 @@ function renderRolesDiscordForm(){
 }
 
 async function guardarRolesDiscord(){
+  if(!usuarioActual || !usuarioActual.esDirectiva){
+    showToast('Solo Directiva puede modificar los roles de Discord por rango');
+    return;
+  }
   const inputs = document.querySelectorAll('.rol-discord-input');
   const roles = {};
   inputs.forEach(inp=>{
