@@ -194,23 +194,6 @@ export default async function handler(req, res) {
 
     // Botón "Postularme al cuerpo" — no requiere estar registrado todavía
     if (customId === 'postularme') {
-      const rolesUsuario = interaction.member?.roles || [];
-      const rolesPreseleccion = (process.env.DISCORD_ROLE_PRESELECCIONADO_IDS || '')
-        .split(',').map(r => r.trim()).filter(Boolean);
-      const requierePreseleccion = rolesPreseleccion.length > 0;
-      const esPreseleccionado = !requierePreseleccion || rolesPreseleccion.some(r => rolesUsuario.includes(r));
-
-      if (!esPreseleccionado) {
-        res.status(200).json({
-          type: 4,
-          data: {
-            content: '⚠️ Este formulario es solo para aspirantes ya preseleccionados por Asuntos Internos. Si crees que deberías tener acceso, contacta a un reclutador.',
-            flags: 64,
-          },
-        });
-        return;
-      }
-
       res.status(200).json({
         type: 9,
         data: {
