@@ -1,3 +1,15 @@
+import admin from 'firebase-admin';
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
 export default async function handler(req, res) {
   const { code } = req.query;
 
@@ -73,6 +85,18 @@ export default async function handler(req, res) {
       debugInfo = 'Error al verificar el rol: ' + String(e);
     }
 
+    // Generar una credencial real de Firebase, solo si el usuario quedó autorizado
+    let firebaseToken = null;
+    if (autorizado) {
+      try {
+        firebaseToken = await admin.auth().createCustomToken(user.id, {
+          esDai, esPolicia, esDirectiva,
+        });
+      } catch (e) {
+        debugInfo = (debugInfo ? debugInfo + ' | ' : '') + 'No se pudo generar la credencial de Firebase: ' + String(e);
+      }
+    }
+
     res.status(200).json({
       id: user.id,
       username: user.username,
@@ -84,6 +108,7 @@ export default async function handler(req, res) {
       esDai,
       esPolicia,
       esDirectiva,
+      firebaseToken,
       debugInfo,
     });
   } catch (e) {
