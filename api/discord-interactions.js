@@ -1,4 +1,16 @@
 import crypto from 'crypto';
+import admin from 'firebase-admin';
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    }),
+  });
+}
+const db = admin.firestore();
 
 export const config = {
   api: { bodyParser: false },
@@ -31,98 +43,35 @@ function verifyDiscordSignature(publicKeyHex, signatureHex, timestamp, body) {
   }
 }
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
-const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-
-function fsValue(v) {
-  if (v === null || v === undefined) return { nullValue: null };
-  if (typeof v === 'string') return { stringValue: v };
-  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-  if (typeof v === 'boolean') return { booleanValue: v };
-  return { stringValue: String(v) };
-}
-
-function fsFromDoc(doc) {
-  const out = { id: doc.name.split('/').pop() };
-  for (const [k, v] of Object.entries(doc.fields || {})) {
-    const type = Object.keys(v)[0];
-    let val = v[type];
-    if (type === 'integerValue') val = parseInt(val, 10);
-    if (type === 'doubleValue') val = parseFloat(val);
-    if (type === 'nullValue') val = null;
-    out[k] = val;
-  }
-  return out;
-}
-
 async function buscarAgentePorDiscord(discordUserId) {
-  const body = {
-    structuredQuery: {
-      from: [{ collectionId: 'agentes' }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'discord' },
-          op: 'EQUAL',
-          value: { stringValue: discordUserId },
-        },
-      },
-      limit: 1,
-    },
-  };
-  const resp = await fetch(`${FIRESTORE_BASE}:runQuery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await resp.json();
-  const found = Array.isArray(data) ? data.find((r) => r.document) : null;
-  return found ? fsFromDoc(found.document) : null;
+  const snap = await db.collection('agentes').where('discord', '==', discordUserId).limit(1).get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, ...doc.data() };
 }
 
 async function buscarTurnoActivo(agenteId) {
-  const body = {
-    structuredQuery: {
-      from: [{ collectionId: 'bitacoras' }],
-      where: {
-        compositeFilter: {
-          op: 'AND',
-          filters: [
-            { fieldFilter: { field: { fieldPath: 'agenteId' }, op: 'EQUAL', value: { stringValue: agenteId } } },
-            { fieldFilter: { field: { fieldPath: 'estadoTurno' }, op: 'EQUAL', value: { stringValue: 'activo' } } },
-          ],
-        },
-      },
-      limit: 1,
-    },
-  };
-  const resp = await fetch(`${FIRESTORE_BASE}:runQuery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await resp.json();
-  const found = Array.isArray(data) ? data.find((r) => r.document) : null;
-  return found ? fsFromDoc(found.document) : null;
+  const snap = await db.collection('bitacoras')
+    .where('agenteId', '==', agenteId)
+    .where('estadoTurno', '==', 'activo')
+    .limit(1).get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, ...doc.data() };
 }
 
 async function crearBitacora(agenteId) {
-  const id = crypto.randomBytes(10).toString('hex');
   const now = Date.now();
   const fecha = new Date().toISOString().slice(0, 10);
-  const fields = {
-    agenteId: fsValue(agenteId),
-    tipo: fsValue('Servicio regular'),
-    fecha: fsValue(fecha),
-    desc: fsValue('Turno registrado desde Discord'),
-    entradaTs: fsValue(now),
-    salidaTs: { nullValue: null },
-    estadoTurno: fsValue('activo'),
-    creado: fsValue(now),
-  };
-  await fetch(`${FIRESTORE_BASE}/bitacoras/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
+  await db.collection('bitacoras').add({
+    agenteId,
+    tipo: 'Servicio regular',
+    fecha,
+    desc: 'Turno registrado desde Discord',
+    entradaTs: now,
+    salidaTs: null,
+    estadoTurno: 'activo',
+    creado: now,
   });
 }
 
@@ -130,42 +79,27 @@ async function cerrarBitacora(turno) {
   const salida = Date.now();
   const duracionMin = Math.max(1, Math.round((salida - turno.entradaTs) / 60000));
   const h50 = duracionMin >= 50;
-  const fields = {
-    salidaTs: fsValue(salida),
-    estadoTurno: fsValue('completado'),
-    duracionMin: fsValue(duracionMin),
-    h50: fsValue(h50),
-  };
-  if (h50) fields.validacionH50 = fsValue('pendiente');
-  const mask = Object.keys(fields).map((k) => `updateMask.fieldPaths=${k}`).join('&');
-  await fetch(`${FIRESTORE_BASE}/bitacoras/${turno.id}?${mask}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
-  });
+  const datos = { salidaTs: salida, estadoTurno: 'completado', duracionMin, h50 };
+  if (h50) datos.validacionH50 = 'pendiente';
+  await db.collection('bitacoras').doc(turno.id).update(datos);
   return duracionMin;
 }
 
-async function crearAgenteDesdeDiscord({ nombre, nombreOOC, placa, aprobadoPor, discordId }){
-  const id = placa ? ('placa-'+placa) : ('nombre-'+crypto.randomBytes(6).toString('hex'));
+async function crearAgenteDesdeDiscord({ nombre, nombreOOC, placa, aprobadoPor, discordId }) {
+  const id = placa ? ('placa-' + placa) : ('nombre-' + crypto.randomBytes(6).toString('hex'));
   const now = Date.now();
-  const fields = {
-    placa: fsValue(placa || ''),
-    nombre: fsValue(nombre),
-    nombreOOC: fsValue(nombreOOC || ''),
-    discord: fsValue(discordId),
-    rango: fsValue('Cadete'),
-    subdivision: fsValue(''),
-    departamento: fsValue(''),
-    estado: fsValue('pendiente'),
-    notas: fsValue(aprobadoPor ? `Ingreso vía Discord — aprobado por: ${aprobadoPor}` : 'Ingreso vía Discord'),
-    creado: fsValue(now),
-  };
-  await fetch(`${FIRESTORE_BASE}/agentes/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
-  });
+  await db.collection('agentes').doc(id).set({
+    placa: placa || '',
+    nombre,
+    nombreOOC: nombreOOC || '',
+    discord: discordId,
+    rango: 'Cadete',
+    subdivision: '',
+    departamento: '',
+    estado: 'pendiente',
+    notas: aprobadoPor ? `Ingreso vía Discord — aprobado por: ${aprobadoPor}` : 'Ingreso vía Discord',
+    creado: now,
+  }, { merge: true });
 }
 
 export default async function handler(req, res) {
