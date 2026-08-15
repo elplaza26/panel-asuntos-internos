@@ -314,7 +314,8 @@
         <div class="stamp">ACTUALIZADO<br><span id="fecha-actual"></span></div>
       </header>
 
-      <div class="grid-cards" style="grid-template-columns: repeat(6, 1fr); margin-bottom:24px;">
+      <div class="section-title">Resumen en vivo</div>
+      <div class="grid-cards" style="grid-template-columns: repeat(6, 1fr); margin-bottom:28px;">
         <div class="card">
           <div class="label">Oficiales en servicio</div>
           <div class="value" id="stat-en-servicio-panel" style="font-size:26px;">0</div>
@@ -341,7 +342,21 @@
         </div>
       </div>
 
-      <div class="panel" style="margin-bottom:24px;">
+      <div class="section-title">Actividad y ascensos</div>
+      <div class="grid-cards" style="grid-template-columns: 2fr 1fr; margin-bottom:28px; align-items:start;">
+        <div class="panel" style="margin-bottom:0;">
+          <h3>Actividad reciente</h3>
+          <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:12px;">Últimos eventos de servicio</p>
+          <div id="actividad-turnos-panel"></div>
+        </div>
+        <div class="panel" style="margin-bottom:0;">
+          <h3>Alertas de ascenso</h3>
+          <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:12px;">Oficiales que cumplen los días requeridos</p>
+          <div id="alertas-ascenso-panel"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:28px;">
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleAnuncios()">
           <div>
             <h3 style="margin-bottom:2px;">📢 Gestión de Anuncios</h3>
@@ -358,68 +373,57 @@
         </div>
       </div>
 
-      <div class="grid-cards" style="grid-template-columns: 2fr 1fr; margin-bottom:24px; align-items:start;">
-        <div class="panel" style="margin-bottom:0;">
-          <h3>Actividad reciente</h3>
-          <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:12px;">Últimos eventos de servicio</p>
-          <div id="actividad-turnos-panel"></div>
+      <div class="section-title">Estadísticas generales</div>
+      <div class="panel" style="margin-bottom:28px;">
+        <div class="form-grid" style="margin-bottom:20px;">
+          <div class="field">
+            <label>Filtrar por sub-división</label>
+            <select id="filtro-subdivision" onchange="renderPanel()"><option value="">Todas las sub-divisiones</option></select>
+          </div>
+          <div class="field">
+            <label>Filtrar por departamento</label>
+            <select id="filtro-departamento" onchange="renderPanel()"><option value="">Todos los departamentos</option></select>
+          </div>
         </div>
-        <div class="panel" style="margin-bottom:0;">
-          <h3>Alertas de ascenso</h3>
-          <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:12px;">Oficiales que cumplen los días requeridos</p>
-          <div id="alertas-ascenso-panel"></div>
+
+        <div class="grid-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom:24px;">
+          <div class="card">
+            <div class="label">Agentes registrados</div>
+            <div class="value" id="stat-agentes">0</div>
+          </div>
+          <div class="card">
+            <div class="label">Bitácoras totales</div>
+            <div class="value" id="stat-bitacoras">0</div>
+          </div>
+          <div class="card">
+            <div class="label">Promedio bitácoras/agente</div>
+            <div class="value" id="stat-promedio">0</div>
+          </div>
         </div>
+
+        <p style="color:var(--paper-dim); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Actividad de bitácoras · últimas 8 semanas</p>
+        <div id="panel-grafica"></div>
       </div>
 
-      <div class="form-grid" style="margin-bottom:20px;">
-        <div class="field">
-          <label>Filtrar por sub-división</label>
-          <select id="filtro-subdivision" onchange="renderPanel()"><option value="">Todas las sub-divisiones</option></select>
+      <div class="section-title">Requiere tu atención</div>
+      <div class="panel" style="margin-bottom:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+          <h3 style="margin:0;">Agentes inactivos</h3>
+          <span style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--paper-dim);">
+            sin bitácora hace más de
+            <input id="umbral-inactivos" type="number" min="1" value="7" oninput="renderPanel()"
+              style="width:52px; background:var(--navy-950); border:1px solid var(--navy-700); color:var(--paper); padding:4px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px;">
+            días
+          </span>
         </div>
-        <div class="field">
-          <label>Filtrar por departamento</label>
-          <select id="filtro-departamento" onchange="renderPanel()"><option value="">Todos los departamentos</option></select>
-        </div>
+        <div id="panel-inactivos" style="margin-bottom:20px;"></div>
+
+        <h3 style="border-top:1px solid var(--navy-700); padding-top:20px;">Últimas bitácoras registradas</h3>
+        <div id="panel-ultimas-bitacoras" style="margin-bottom:20px;"></div>
+
+        <h3 style="border-top:1px solid var(--navy-700); padding-top:20px;">Sanciones recientes</h3>
+        <div id="panel-ultimas-sanciones"></div>
       </div>
-
-      <div class="grid-cards">
-        <div class="card">
-          <div class="label">Agentes registrados</div>
-          <div class="value" id="stat-agentes">0</div>
-        </div>
-        <div class="card">
-          <div class="label">Bitácoras totales</div>
-          <div class="value" id="stat-bitacoras">0</div>
-        </div>
-        <div class="card alert">
-          <div class="label">Sanciones activas</div>
-          <div class="value" id="stat-sanciones">0</div>
-        </div>
-        <div class="card">
-          <div class="label">Promedio bitácoras/agente</div>
-          <div class="value" id="stat-promedio">0</div>
-        </div>
-      </div>
-
-      <div class="section-title">Actividad de bitácoras · últimas 8 semanas</div>
-      <div id="panel-grafica" style="margin-bottom:24px;"></div>
-
-      <div class="section-title">
-        Agentes inactivos
-        <span style="display:flex; align-items:center; gap:6px; flex:none; text-transform:none; letter-spacing:0;">
-          sin bitácora hace más de
-          <input id="umbral-inactivos" type="number" min="1" value="7" oninput="renderPanel()"
-            style="width:52px; background:var(--navy-950); border:1px solid var(--navy-700); color:var(--paper); padding:4px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px;">
-          días
-        </span>
-      </div>
-      <div id="panel-inactivos"></div>
-
-      <div class="section-title">Últimas bitácoras registradas</div>
-      <div id="panel-ultimas-bitacoras"></div>
-
-      <div class="section-title">Sanciones recientes</div>
-      <div id="panel-ultimas-sanciones"></div>
     </section>
 
     <!-- AGENTES -->
@@ -540,10 +544,6 @@
         <div class="card">
           <div class="label">Horas totales</div>
           <div class="value" id="stat-horas-totales">0h</div>
-        </div>
-        <div class="card alert">
-          <div class="label">Pendientes H50</div>
-          <div class="value" id="stat-pendientes-h50">0</div>
         </div>
         <div class="card">
           <div class="label">En servicio ahora</div>
@@ -1025,7 +1025,6 @@ let usuarioActual = null;
 let auditoria = [];
 let miAgenteId = null;
 let turnoActivo = null;
-const MINUTOS_H50 = 50;
 
 function iniciarLoginDiscord(){
   const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
@@ -2399,15 +2398,12 @@ function renderBitacorasTabla(){
   const completados = bitacoras.filter(b=>b.estadoTurno==='completado');
   const enServicio = bitacoras.filter(b=>b.estadoTurno==='activo');
   const totalMin = completados.reduce((acc,b)=> acc + (b.duracionMin||0), 0);
-  const pendientesH50 = bitacoras.filter(b=>b.validacionH50==='pendiente').length;
 
   const statTurnos = document.getElementById('stat-turnos-completados');
   const statHoras = document.getElementById('stat-horas-totales');
-  const statPendientes = document.getElementById('stat-pendientes-h50');
   const statEnServicio = document.getElementById('stat-en-servicio');
   if(statTurnos) statTurnos.textContent = completados.length;
   if(statHoras) statHoras.textContent = (totalMin/60).toFixed(1)+'h';
-  if(statPendientes) statPendientes.textContent = pendientesH50;
   if(statEnServicio) statEnServicio.textContent = enServicio.length;
 
   const tablaServicio = document.getElementById('tabla-en-servicio');
@@ -2427,7 +2423,7 @@ function renderBitacorasTabla(){
 
   if(!bitacoras.length){ el.innerHTML = '<div class="empty">No hay bitácoras registradas todavía.</div>'; return; }
   el.innerHTML = `<table><thead><tr>
-    <th>Fecha</th><th>Agente</th><th>Tipo</th><th>Entrada</th><th>Salida</th><th>Duración</th><th>H50</th><th>Descripción</th><th></th>
+    <th>Fecha</th><th>Agente</th><th>Tipo</th><th>Entrada</th><th>Salida</th><th>Duración</th><th>Descripción</th><th></th>
   </tr></thead><tbody>
   ${bitacoras.map(b=>`
     <tr>
@@ -2437,7 +2433,6 @@ function renderBitacorasTabla(){
       <td class="mono">${fmtHoraSimple(b.entradaTs)}</td>
       <td class="mono">${b.estadoTurno==='activo' ? '<span class="pill activo">En servicio</span>' : fmtHoraSimple(b.salidaTs)}</td>
       <td class="mono">${b.duracionMin!=null ? b.duracionMin+' min' : '—'}</td>
-      <td>${b.validacionH50==='pendiente' ? `<button class="btn secondary" style="padding:4px 10px; font-size:10.5px;" onclick="aprobarH50('${b.id}')">Pendiente · Aprobar</button>` : b.validacionH50==='aprobado' ? '<span class="pill activo">Verificado</span>' : '—'}</td>
       <td>${b.desc||'—'}</td>
       <td class="row-actions"><button class="icon-btn" onclick="eliminarBitacora('${b.id}')">Eliminar</button></td>
     </tr>`).join('')}
@@ -2498,23 +2493,12 @@ async function forzarCierreTurno(id){
   try{
     const salida = Date.now();
     const duracionMin = Math.max(1, Math.round((salida - b.entradaTs) / 60000));
-    const h50 = duracionMin >= MINUTOS_H50;
     await db.collection('bitacoras').doc(id).update({
-      salidaTs: salida, estadoTurno:'completado', duracionMin,
-      h50, validacionH50: h50 ? 'pendiente' : null
+      salidaTs: salida, estadoTurno:'completado', duracionMin
     });
     registrarAuditoria(`Forzó el cierre del turno de ${nombreAgente(b.agenteId)}`);
     showToast('Turno cerrado');
   }catch(e){ showToast('Error al cerrar el turno'); }
-}
-
-async function aprobarH50(id){
-  const b = bitacoras.find(x=>x.id===id);
-  try{
-    await db.collection('bitacoras').doc(id).update({ validacionH50: 'aprobado' });
-    registrarAuditoria(`Aprobó el H50 de ${b? nombreAgente(b.agenteId) : 'un turno'}`);
-    showToast('H50 aprobado');
-  }catch(e){ showToast('Error al aprobar'); }
 }
 
 function renderSancionesTabla(){
@@ -2738,7 +2722,6 @@ function renderPanel(){
 
   document.getElementById('stat-agentes').textContent = agFilt.length;
   document.getElementById('stat-bitacoras').textContent = biFilt.length;
-  document.getElementById('stat-sanciones').textContent = saFilt.length;
   document.getElementById('stat-promedio').textContent = agFilt.length ? (biFilt.length/agFilt.length).toFixed(1) : '0';
 
   renderGraficaBitacoras(biFilt);
@@ -2995,12 +2978,10 @@ async function finalizarTurno(){
   try{
     const salida = Date.now();
     const duracionMin = Math.max(1, Math.round((salida - turnoActivo.entradaTs) / 60000));
-    const h50 = duracionMin >= MINUTOS_H50;
     await db.collection('bitacoras').doc(turnoActivo.id).update({
-      salidaTs: salida, estadoTurno:'completado', duracionMin,
-      h50, validacionH50: h50 ? 'pendiente' : null
+      salidaTs: salida, estadoTurno:'completado', duracionMin
     });
-    showToast(`Turno finalizado (${duracionMin} min)${h50? ' — queda pendiente de validación H50':''}`);
+    showToast(`Turno finalizado (${duracionMin} min)`);
   }catch(e){ showToast('Error al finalizar el turno'); }
 }
 
@@ -3035,7 +3016,7 @@ function renderPoliciaBitacoras(lista){
       <td><span class="pill ${claseTipoBitacora(b.tipo)}">${b.tipo||'Servicio regular'}</span></td>
       <td class="mono">${fmtHoraSimple(b.entradaTs)}</td>
       <td class="mono">${b.estadoTurno==='activo' ? '<span class="pill activo">En servicio</span>' : fmtHoraSimple(b.salidaTs)}</td>
-      <td class="mono">${b.duracionMin!=null ? b.duracionMin+' min'+(b.h50? ' · H50':'') : '—'}</td>
+      <td class="mono">${b.duracionMin!=null ? b.duracionMin+' min' : '—'}</td>
       <td>${b.desc||'—'}</td>
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes bitácoras registradas.</div>';
@@ -3251,51 +3232,76 @@ function renderAscensos(){
   const elegibles = conDatos.filter(x=> x.cumpleTodo).sort((a,b)=> b.progreso - a.progreso);
   const enProgreso = conDatos.filter(x=> !x.cumpleTodo).sort((a,b)=> b.progreso - a.progreso);
 
-  const celdaRequisito = (valor, requerido, ok, sufijo) => requerido > 0
-    ? `<span class="${ok? '' : ''}" style="color:${ok? '#8fbf92':'var(--paper-dim)'};">${ok?'✓ ':''}${valor}${sufijo}/${requerido}${sufijo}</span>`
-    : '<span style="color:var(--steel-600);">—</span>';
+  const miniBarra = (valor, requerido, ok) => requerido > 0 ? `
+    <div style="flex:1; min-width:70px;">
+      <div style="display:flex; justify-content:space-between; font-size:9.5px; color:${ok?'#8fbf92':'var(--paper-dim)'}; margin-bottom:2px;">
+        <span>${ok?'✓':''} ${valor}/${requerido}</span>
+      </div>
+      <div style="background:var(--navy-800); border:1px solid var(--navy-700); border-radius:20px; height:5px; overflow:hidden;">
+        <div style="width:${Math.min(100, Math.round((valor/requerido)*100))}%; height:100%; background:${ok?'var(--green)':'var(--brass-dim)'};"></div>
+      </div>
+    </div>` : '';
 
-  elElegibles.innerHTML = elegibles.length ? `<table><thead><tr>
-    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días</th><th>Denuncias</th><th>Evidencias</th><th>Bitácoras</th><th></th>
-  </tr></thead><tbody>
-  ${elegibles.map(x=>`
-    <tr>
-      <td class="mono">${x.agente.placa||'—'}</td>
-      <td>${x.agente.nombre}</td>
-      <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
-      <td class="mono">${celdaRequisito(x.dias, x.req.dias, x.diasOk, 'd')}</td>
-      <td class="mono">${celdaRequisito(x.denunciasVal, x.req.denuncias, x.denunciasOk, '')}</td>
-      <td class="mono">${celdaRequisito(x.evidenciasVal, x.req.evidencias, x.evidenciasOk, '')}</td>
-      <td class="mono">${x.bitacorasMarcadas}</td>
-      <td class="row-actions"><button class="btn" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Ascender</button></td>
-    </tr>`).join('')}
-  </tbody></table>` : '<div class="empty">Nadie cumple todos los requisitos todavía.</div>';
+  elElegibles.innerHTML = elegibles.length ? `
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:14px;">
+    ${elegibles.map(x=>{
+      const sugerido = siguienteRango(x.agente.rango) || x.agente.rango;
+      return `
+      <div class="panel" style="margin-bottom:0; border-color:var(--green); background:rgba(79,122,82,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;">
+          <div>
+            <div style="font-family:var(--font-display); font-size:15px;">${x.agente.nombre}</div>
+            <div class="mono" style="font-size:10.5px; color:var(--paper-dim);">${x.agente.placa? '#'+x.agente.placa : '—'}</div>
+          </div>
+          <span class="pill activo">✓ Listo</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; margin-bottom:12px; flex-wrap:wrap;">
+          ${iconoRango(x.agente.rango)} ${x.agente.rango||'—'} <span style="color:var(--brass);">→</span> ${iconoRango(sugerido)} <strong>${sugerido}</strong>
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+          ${miniBarra(x.dias||0, x.req.dias, x.diasOk)}
+          ${miniBarra(x.denunciasVal, x.req.denuncias, x.denunciasOk)}
+          ${miniBarra(x.evidenciasVal, x.req.evidencias, x.evidenciasOk)}
+        </div>
+        <button class="btn" style="width:100%; padding:9px; font-size:12px;" onclick="prellenarAscenso('${x.agente.id}')">Ascender a ${sugerido}</button>
+      </div>`;
+    }).join('')}
+    </div>` : '<div class="empty">Nadie cumple todos los requisitos todavía.</div>';
 
   elProgreso.innerHTML = enProgreso.length ? `<table><thead><tr>
-    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Días</th><th>Denuncias</th><th>Evidencias</th><th>Bitácoras</th><th>Progreso</th><th></th>
+    <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Progreso por requisito</th><th>Bitácoras</th><th></th>
   </tr></thead><tbody>
   ${enProgreso.map(x=>`
     <tr>
       <td class="mono">${x.agente.placa||'—'}</td>
       <td>${x.agente.nombre}</td>
       <td>${iconoRango(x.agente.rango)} ${x.agente.rango||'—'}</td>
-      <td class="mono">${celdaRequisito(x.dias, x.req.dias, x.diasOk, 'd')}</td>
-      <td class="mono">${celdaRequisito(x.denunciasVal, x.req.denuncias, x.denunciasOk, '')}</td>
-      <td class="mono">${celdaRequisito(x.evidenciasVal, x.req.evidencias, x.evidenciasOk, '')}</td>
-      <td class="mono">${x.bitacorasMarcadas}</td>
-      <td style="min-width:110px;">
-        <div style="background:var(--navy-800); border:1px solid var(--navy-700); border-radius:20px; height:8px; overflow:hidden;">
-          <div style="width:${x.progreso}%; height:100%; background:var(--brass-dim);"></div>
+      <td style="min-width:220px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          ${miniBarra(x.dias||0, x.req.dias, x.diasOk)}
+          ${miniBarra(x.denunciasVal, x.req.denuncias, x.denunciasOk)}
+          ${miniBarra(x.evidenciasVal, x.req.evidencias, x.evidenciasOk)}
         </div>
-        <div class="mono" style="font-size:10.5px; color:var(--paper-dim); margin-top:3px;">${x.progreso}%</div>
       </td>
+      <td class="mono">${x.bitacorasMarcadas}</td>
       <td class="row-actions"><button class="btn secondary" style="padding:6px 14px; font-size:11px;" onclick="prellenarAscenso('${x.agente.id}')">Adelantar</button></td>
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No hay agentes con requisito configurado en progreso.</div>';
 }
 
+function siguienteRango(rangoActual){
+  const idx = RANGOS_ORDEN.indexOf(rangoActual);
+  // RANGOS_ORDEN va de mayor a menor jerarquía, así que "subir" es ir hacia atrás en la lista
+  if(idx <= 0) return null;
+  return RANGOS_ORDEN[idx - 1];
+}
+
 function prellenarAscenso(agenteId){
   document.getElementById('asc-agente').value = agenteId;
+  const agente = agentes.find(a=>a.id===agenteId);
+  const sugerido = agente ? siguienteRango(agente.rango) : null;
+  const selRango = document.getElementById('asc-rango-destino');
+  if(sugerido && selRango) selRango.value = sugerido;
   document.getElementById('view-ascensos').scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
