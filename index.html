@@ -1376,6 +1376,7 @@ async function addAgente(){
       sincronizarRolDiscord(discord, anterior.rango, rango); // se hace en segundo plano, no bloquea el guardado
       sincronizarApodoDiscord(discord, rango, nombre, placa);
     }
+    sincronizarDivisionesDiscord(discord, anterior?.divisiones, divisiones); // se hace en segundo plano
     registrarAuditoria(anterior ? `Editó al agente ${nombre}${placa? ' (#'+placa+')':''}` : `Registró al agente ${nombre}${placa? ' (#'+placa+')':''}`);
     cancelarEdicionAgente();
     showToast(anterior ? 'Cambios guardados' : 'Agente registrado');
@@ -3165,6 +3166,12 @@ async function guardarRequisitos(){
   }catch(e){ showToast('Error al guardar los requisitos'); }
 }
 
+const ROLES_DIVISION_DISCORD = {
+  'DIRECTIVA': '1521954294017036341',
+  'DAI': '1521954294017036340',
+  'CICPC': '1521954294017036339',
+};
+
 const ROLES_DISCORD_POR_DEFECTO = {
   'Comisionado DAI': '1538675774243078257',
 };
@@ -3217,6 +3224,27 @@ async function sincronizarRolDiscord(discordUserId, rangoAnterior, rangoNuevo){
     }
   }catch(e){
     return { omitido:true, razon:'Error de conexión al sincronizar con Discord: ' + String(e) };
+  }
+}
+
+async function sincronizarDivisionesDiscord(discordUserId, divisionesAnteriores, divisionesNuevas){
+  if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
+  const anteriores = divisionesAnteriores || [];
+  const nuevas = divisionesNuevas || [];
+  const agregarRoles = nuevas.filter(d=>!anteriores.includes(d)).map(d=>ROLES_DIVISION_DISCORD[d]).filter(Boolean);
+  const quitarRoles = anteriores.filter(d=>!nuevas.includes(d)).map(d=>ROLES_DIVISION_DISCORD[d]).filter(Boolean);
+  if(!agregarRoles.length && !quitarRoles.length) return { omitido:true, razon:'Sin cambios en las divisiones.' };
+  try{
+    const resp = await fetch('/api/discord-role-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discordUserId, agregarRoles, quitarRoles })
+    });
+    const texto = await resp.text();
+    try{ return JSON.parse(texto); }
+    catch(e){ return { omitido:true, razon:`Respuesta inesperada (código ${resp.status}).` }; }
+  }catch(e){
+    return { omitido:true, razon:'Error de conexión al sincronizar las divisiones con Discord.' };
   }
 }
 
