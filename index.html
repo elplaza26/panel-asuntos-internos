@@ -454,6 +454,7 @@
               </optgroup>
               <optgroup label="DAI">
                 <option value="Pasante DAI">Pasante DAI</option>
+                <option value="Comisionado DAI">Comisionado DAI</option>
               </optgroup>
               <optgroup label="Comisarios">
                 <option value="Comisario Superior">Comisario Superior</option>
@@ -483,6 +484,21 @@
           </div>
           <div class="field"><label>Sub-división</label><input id="ag-subdivision" placeholder="Ej. DAI"></div>
           <div class="field"><label>Departamento</label><input id="ag-departamento" placeholder="Ej. DIRECTIVA"></div>
+
+          <div class="field" style="grid-column: span 3;">
+            <label>Divisiones (máximo 2 — se suman al rol base de Policía, que siempre lleva)</label>
+            <div style="display:flex; gap:18px; margin-top:8px;">
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
+                <input type="checkbox" class="ag-division-check" value="DIRECTIVA" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> DIRECTIVA
+              </label>
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
+                <input type="checkbox" class="ag-division-check" value="DAI" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> DAI
+              </label>
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
+                <input type="checkbox" class="ag-division-check" value="CICPC" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> CICPC
+              </label>
+            </div>
+          </div>
 
           <div class="field" style="grid-column: span 3;">
             <label>Roles adicionales (como en Discord — puede tener varios a la vez)</label>
@@ -807,6 +823,7 @@
               </optgroup>
               <optgroup label="DAI">
                 <option value="Pasante DAI">Pasante DAI</option>
+                <option value="Comisionado DAI">Comisionado DAI</option>
               </optgroup>
               <optgroup label="Comisarios">
                 <option value="Comisario Superior">Comisario Superior</option>
@@ -1162,7 +1179,7 @@ let rolBasePolicia = '';
 
 const RANGOS_ORDEN = [
   'Director General','Sub Director','Jefe Departamento','Sub Jefe de Departamento','Dev. Discord','Staff','Admin Staff Policial',
-  'Pasante DAI',
+  'Pasante DAI','Comisionado DAI',
   'Comisario Superior','Comisario General','Primer Comisario',
   'Comisionado Jefe','Comisionado',
   'Inspector Jefe','Inspector',
@@ -1326,6 +1343,16 @@ function initListeners(){
 }
 
 // ---------- ACTIONS ----------
+function validarMaxDivisiones(checkbox){
+  const checks = document.querySelectorAll('.ag-division-check');
+  const marcados = [...checks].filter(c=>c.checked);
+  if(marcados.length > 2){
+    // Se pasó del límite: desmarca el que acaba de intentar marcarse
+    checkbox.checked = false;
+    showToast('Máximo 2 divisiones por agente');
+  }
+}
+
 async function addAgente(){
   const placa = document.getElementById('ag-placa').value.trim();
   const nombre = document.getElementById('ag-nombre').value.trim();
@@ -1335,11 +1362,13 @@ async function addAgente(){
   const subdivision = document.getElementById('ag-subdivision').value.trim();
   const departamento = document.getElementById('ag-departamento').value.trim();
   const rolesExtra = [...rolesExtraFormulario];
+  const divisiones = [...document.querySelectorAll('.ag-division-check:checked')].map(c=>c.value);
   if(!nombre){ showToast('Escribe un nombre'); return; }
+  if(divisiones.length > 2){ showToast('Máximo 2 divisiones por agente'); return; }
   try{
     const id = placa ? ('placa-'+placa) : uid();
     const anterior = agentes.find(a=>a.id===id);
-    const datos = { placa, nombre, nombreOOC, discord, rango, subdivision, departamento, rolesExtra, estado: anterior?.estado || 'activo' };
+    const datos = { placa, nombre, nombreOOC, discord, rango, subdivision, departamento, rolesExtra, divisiones, estado: anterior?.estado || 'activo' };
     if(!anterior) datos.creado = Date.now(); // solo se fija la fecha de alta la primera vez
     await db.collection('agentes').doc(id).set(datos, { merge:true });
     if(anterior && anterior.rango && anterior.rango !== rango){
@@ -1651,6 +1680,8 @@ function editarAgente(id){
   document.getElementById('ag-departamento').value = ag.departamento || '';
   rolesExtraFormulario = [...(ag.rolesExtra || [])];
   renderChipsRolesExtra();
+  const divisionesGuardadas = ag.divisiones || [];
+  document.querySelectorAll('.ag-division-check').forEach(c=>{ c.checked = divisionesGuardadas.includes(c.value); });
 
   document.getElementById('titulo-form-agente').textContent = `Editando a ${ag.nombre}`;
   document.getElementById('btn-guardar-agente').textContent = 'Guardar cambios';
@@ -1669,6 +1700,7 @@ function cancelarEdicionAgente(){
   document.getElementById('ag-departamento').value = '';
   rolesExtraFormulario = [];
   renderChipsRolesExtra();
+  document.querySelectorAll('.ag-division-check').forEach(c=>{ c.checked = false; });
   document.getElementById('titulo-form-agente').textContent = 'Registrar nuevo agente';
   document.getElementById('btn-guardar-agente').textContent = 'Registrar';
   document.getElementById('btn-cancelar-edicion').style.display = 'none';
@@ -2029,7 +2061,7 @@ function renderAgentesTabla(){
       <td>${a.nombre}${chipsRolesExtra(a.rolesExtra)}</td>
       <td>${a.nombreOOC||'—'}</td>
       <td class="mono">${a.discord||'—'}</td>
-      <td>${iconoRango(a.rango)} ${a.rango||'—'}</td>
+      <td>${iconoRango(a.rango)} ${a.rango||'—'}${chipsDivisiones(a.divisiones)}</td>
       <td><span class="tally">${countBitacoras(a.id)}</span></td>
       <td><span class="tally">${countSancionesActivas(a.id)}</span></td>
       <td><span class="pill ${a.estado==='activo'?'activo':a.estado==='expulsado'?'expulsado':a.estado==='pendiente'?'pendiente':'sancionado'}" style="cursor:pointer" onclick="toggleEstadoAgente('${a.id}')" title="Clic para reactivar">${a.estado}</span></td>
@@ -2043,6 +2075,13 @@ function chipsRolesExtra(rolesExtra){
   if(!rolesExtra || !rolesExtra.length) return '';
   return `<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:3px;">${
     rolesExtra.map(r=>`<span style="font-size:9.5px; padding:1px 6px; border-radius:8px; background:var(--navy-800); border:1px solid var(--navy-700); color:var(--paper-dim); white-space:nowrap;">${r}</span>`).join('')
+  }</div>`;
+}
+
+function chipsDivisiones(divisiones){
+  if(!divisiones || !divisiones.length) return '';
+  return `<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:3px;">${
+    divisiones.map(d=>`<span style="font-size:9.5px; padding:1px 6px; border-radius:8px; background:rgba(201,162,39,0.12); border:1px solid var(--brass-dim); color:var(--brass); white-space:nowrap; font-weight:600;">${d}</span>`).join('')
   }</div>`;
 }
 
@@ -3126,13 +3165,17 @@ async function guardarRequisitos(){
   }catch(e){ showToast('Error al guardar los requisitos'); }
 }
 
+const ROLES_DISCORD_POR_DEFECTO = {
+  'Comisionado DAI': '1538675774243078257',
+};
+
 function renderRolesDiscordForm(){
   const el = document.getElementById('form-roles-discord');
   if(!el) return;
   el.innerHTML = RANGOS_ORDEN.map(r=>`
     <div class="field">
       <label>${iconoRango(r)} ${r}</label>
-      <input type="text" class="rol-discord-input" data-rango="${r}" placeholder="ID del rol en Discord" value="${rolesDiscordPorRango[r] || ''}">
+      <input type="text" class="rol-discord-input" data-rango="${r}" placeholder="ID del rol en Discord" value="${rolesDiscordPorRango[r] || ROLES_DISCORD_POR_DEFECTO[r] || ''}">
     </div>`).join('');
 }
 
