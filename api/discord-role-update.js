@@ -8,9 +8,9 @@ export default async function handler(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch (e) { body = {}; }
   }
-  const { discordUserId, rolAnteriorId, rolNuevoId, rolBaseId, soloRoles } = body || {};
+  const { discordUserId, rolAnteriorId, rolNuevoId, rolBaseId, soloRoles, agregarRoles, quitarRoles } = body || {};
 
-  if (!discordUserId || (!rolAnteriorId && !rolNuevoId && !rolBaseId && !soloRoles)) {
+  if (!discordUserId || (!rolAnteriorId && !rolNuevoId && !rolBaseId && !soloRoles && !agregarRoles && !quitarRoles)) {
     res.status(400).json({ error: 'Faltan datos (discordUserId y al menos un rol a agregar, quitar, o soloRoles)' });
     return;
   }
@@ -33,6 +33,28 @@ export default async function handler(req, res) {
       } else {
         const errText = await patchRes.text();
         resultado.errores.push(`No se pudieron reemplazar los roles (código ${patchRes.status}): ${errText}`);
+      }
+      res.status(200).json(resultado);
+      return;
+    }
+
+    // Modo "lista de roles": agrega varios de golpe (ej. divisiones) y/o quita varios
+    if (agregarRoles || quitarRoles) {
+      for (const rolId of (agregarRoles || [])) {
+        const r = await fetch(
+          `https://discord.com/api/guilds/${guildId}/members/${discordUserId}/roles/${rolId}`,
+          { method: 'PUT', headers }
+        );
+        if (r.ok) resultado.agregado = true;
+        else resultado.errores.push(`No se pudo agregar el rol ${rolId} (código ${r.status})`);
+      }
+      for (const rolId of (quitarRoles || [])) {
+        const r = await fetch(
+          `https://discord.com/api/guilds/${guildId}/members/${discordUserId}/roles/${rolId}`,
+          { method: 'DELETE', headers }
+        );
+        if (r.ok) resultado.quitado = true;
+        else resultado.errores.push(`No se pudo quitar el rol ${rolId} (código ${r.status})`);
       }
       res.status(200).json(resultado);
       return;
