@@ -3166,6 +3166,8 @@ async function guardarRequisitos(){
   }catch(e){ showToast('Error al guardar los requisitos'); }
 }
 
+const CANAL_ASCENSOS_ID = '1521954296491409419';
+
 const ROLES_DIVISION_DISCORD = {
   'DIRECTIVA': '1521954294017036341',
   'DAI': '1521954294017036340',
@@ -3406,6 +3408,22 @@ async function aplicarAscenso(agenteId, rangoNuevo, fecha, nota, solicitadoPor){
   }else{
     showToast(`${agente.nombre} ascendido a ${rangoNuevo} y su rol de Discord fue actualizado`);
   }
+
+  // Publicar el aviso de ascenso en el canal correspondiente
+  try{
+    await fetch('/api/discord-post-ascenso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channelId: CANAL_ASCENSOS_ID,
+        discordUserId: agente.discord || '',
+        agenteNombre: agente.nombre,
+        agentePlaca: agente.placa || '',
+        rangoAnterior, rangoNuevo,
+        aprobadoPorNombre: usuarioActual?.global_name || null,
+      })
+    });
+  }catch(e){ /* no bloquea el flujo si falla el aviso */ }
 }
 
 async function ejecutarAscensoManual(){
