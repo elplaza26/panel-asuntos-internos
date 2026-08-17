@@ -2028,14 +2028,15 @@ function countSancionesActivas(agenteId){
 }
 
 function renderSelects(){
-  const ordenados = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
+  const seleccionables = agentes.filter(a=> a.estado!=='pendiente' && a.estado!=='expulsado');
+  const ordenados = [...seleccionables].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
   const opts = ordenados.map(a=>`<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre}${a.rango? ' — '+a.rango:''}</option>`).join('');
-  document.getElementById('bi-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
-  document.getElementById('sa-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
-  document.getElementById('bo-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
-  document.getElementById('asc-agente').innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+  document.getElementById('bi-agente').innerHTML = seleccionables.length ? opts : '<option value="">No hay agentes aprobados todavía</option>';
+  document.getElementById('sa-agente').innerHTML = seleccionables.length ? opts : '<option value="">No hay agentes aprobados todavía</option>';
+  document.getElementById('bo-agente').innerHTML = seleccionables.length ? opts : '<option value="">No hay agentes aprobados todavía</option>';
+  document.getElementById('asc-agente').innerHTML = seleccionables.length ? opts : '<option value="">No hay agentes aprobados todavía</option>';
   const selAusencia = document.getElementById('au-agente');
-  if(selAusencia) selAusencia.innerHTML = agentes.length ? opts : '<option value="">Registra un agente primero</option>';
+  if(selAusencia) selAusencia.innerHTML = seleccionables.length ? opts : '<option value="">No hay agentes aprobados todavía</option>';
 }
 
 function renderAgentesTabla(){
@@ -2373,7 +2374,7 @@ function renderDenunciasStats(){
     const termino = (document.getElementById('buscar-agente-denuncia')?.value || '').trim().toLowerCase();
     const soloIniciados = document.getElementById('solo-iniciados-denuncia')?.checked;
 
-    let lista = [...agentes];
+    let lista = agentes.filter(a=> a.estado!=='pendiente' && a.estado!=='expulsado');
     if(termino){
       lista = lista.filter(a =>
         (a.nombre||'').toLowerCase().includes(termino) ||
