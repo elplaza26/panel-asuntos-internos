@@ -1628,13 +1628,26 @@ function toggleDetalleIngreso(id){
   el.style.display = visible ? 'none' : 'grid';
 }
 
+function siguientePlacaSugerida(){
+  let maxNum = 0, maxLen = 4;
+  agentes.forEach(a=>{
+    if(a.placa && /^\d+$/.test(a.placa)){
+      const n = parseInt(a.placa, 10);
+      if(n > maxNum){ maxNum = n; maxLen = a.placa.length; }
+    }
+  });
+  if(maxNum === 0) return '';
+  return String(maxNum + 1).padStart(maxLen, '0');
+}
+
 async function aprobarIngreso(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
 
   let placaFinal = ag.placa || '';
   if(!placaFinal){
-    const respuesta = window.prompt(`Asigna un número de placa para ${ag.nombre} (déjalo vacío si no aplica):`, '');
+    const sugerida = siguientePlacaSugerida();
+    const respuesta = window.prompt(`Asigna un número de placa para ${ag.nombre} (déjalo vacío si no aplica):`, sugerida);
     if(respuesta === null) return; // canceló el prompt
     placaFinal = respuesta.trim();
   }
@@ -2740,10 +2753,13 @@ function renderAlertasAscensoPanel(){
   if(!el) return;
   const activos = agentes.filter(a=>a.estado==='activo');
   const elegibles = activos.filter(a=>{
-    const requisito = requisitosAscenso[a.rango] || 0;
-    if(requisito <= 0) return false;
+    const req = requisitosAscenso[a.rango];
+    if(!req || (req.dias<=0 && req.denuncias<=0 && req.evidencias<=0)) return false;
     const dias = diasEnRango(a);
-    return dias !== null && dias >= requisito;
+    const diasOk = req.dias <= 0 || (dias !== null && dias >= req.dias);
+    const denunciasOk = req.denuncias <= 0 || contarValidasPorTipo(a, 'denuncias') >= req.denuncias;
+    const evidenciasOk = req.evidencias <= 0 || contarValidasPorTipo(a, 'evidencias') >= req.evidencias;
+    return diasOk && denunciasOk && evidenciasOk;
   });
   el.innerHTML = elegibles.length ? elegibles.map(a=>`
     <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--navy-800); font-size:12.5px;">
