@@ -16,20 +16,21 @@ export default async function handler(req, res) {
 
   const payload = {
     embeds: [{
-      title: '📝 Solicitud de Ingreso al Cuerpo',
+      title: '📝 Presolicitud de Ingreso al Cuerpo',
       description:
+        'Esto es una **preinscripción**, no el ingreso final — sirve para dejar registrado tu interés en unirte antes de completar el proceso formal.\n\n' +
         '**Pasos a seguir:**\n' +
-        '1. Presiona **Solicitar rango** (solo cuando estés aprobado).\n' +
-        '2. Completa tus datos en el formulario.\n' +
-        '3. Tu solicitud queda pendiente de revisión.\n' +
-        '4. En cuanto te aprueben, ya eres parte del cuerpo policial.',
+        '1. Presiona **Presolicitar** y completa tus datos.\n' +
+        '2. Tu preinscripción queda pendiente de revisión.\n' +
+        '3. Un reclutador la evalúa y te contacta.\n' +
+        '4. Si calificas, ahí se te da la aprobación final y pasas a formar parte del cuerpo.',
       color: 3066993,
-      footer: { text: 'DAI Rebelión · Sistema de reclutamiento' },
+      footer: { text: 'DAI Rebelión · Presolicitud de reclutamiento' },
     }],
     components: [{
       type: 1,
       components: [
-        { type: 2, style: 1, label: 'Solicitar rango', custom_id: 'postularme_2', emoji: { name: '📝' } },
+        { type: 2, style: 1, label: 'Presolicitar', custom_id: 'postularme_2', emoji: { name: '📝' } },
       ],
     }],
   };
