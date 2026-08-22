@@ -24,7 +24,8 @@ export default async function handler(req, res) {
         '2. Al terminar, te va a salir un botón para pasar a la Fase 2 — complétala también.\n' +
         '3. Tu presolicitud queda pendiente de revisión en el panel.\n' +
         '4. El DAI o Directiva la aprueba o la rechaza.\n' +
-        '5. Si te aprueban, ahí se te asigna el rol de **Preseleccionado** — recién entonces puedes usar el botón de "Solicitar rango".',
+        '5. Si te aprueban, se te asigna el rol de **Preseleccionado**.\n' +
+        '6. Con ese rol, se te hará una **entrevista IC** — recién después de eso podrás usar el botón de "Solicitar rango".',
       color: 3066993,
       footer: { text: 'DAI Rebelión · Presolicitud de reclutamiento' },
     }],
