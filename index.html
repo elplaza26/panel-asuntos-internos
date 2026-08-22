@@ -905,11 +905,22 @@
       <div class="panel">
         <h3>Publicar solicitud de ingreso en Discord</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
-          Publica el botón "Postularme al cuerpo" en tu canal de <strong>solicitud de rango</strong>. Quien lo use queda como pendiente en la sección de abajo hasta que lo apruebes.
+          Publica el botón "Solicitar rango" en tu canal de <strong>solicitud de rango</strong>. Quien lo use queda como pendiente en la sección de abajo hasta que lo apruebes.
         </p>
         <div class="form-grid">
           <div class="field" style="grid-column: span 2;"><label>ID del canal "Solicitud de rango"</label><input id="discord-canal-solicitud-id" placeholder="Ej. 1234567890123456789"></div>
           <div class="field"><button class="btn secondary" onclick="publicarSolicitudDiscord()">Publicar en Discord</button></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Publicar solicitud de ingreso en Discord (canal 2)</h3>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
+          Exactamente el mismo formulario de arriba, pero para publicarlo en <strong>otro canal distinto</strong> — por ejemplo, si tienes dos canales de reclutamiento.
+        </p>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 2;"><label>ID del canal (2)</label><input id="discord-canal-solicitud-id-2" placeholder="Ej. 1234567890123456789"></div>
+          <div class="field"><button class="btn secondary" onclick="publicarSolicitudDiscord2()">Publicar en Discord</button></div>
         </div>
       </div>
 
@@ -2512,6 +2523,33 @@ async function publicarSolicitudDiscord(){
     }
     if(data.ok){
       registrarAuditoria('Publicó el botón de Solicitud de rango en Discord');
+      showToast('Mensaje publicado en Discord');
+    }else{
+      showToast('Error: ' + (data.error || 'no se pudo publicar'));
+      console.error(data);
+    }
+  }catch(e){ showToast('Error de conexión al publicar en Discord'); }
+}
+
+async function publicarSolicitudDiscord2(){
+  const channelId = document.getElementById('discord-canal-solicitud-id-2').value.trim();
+  if(!channelId){ showToast('Escribe el ID del canal'); return; }
+  try{
+    const resp = await fetch('/api/discord-post-solicitud-2', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ channelId })
+    });
+    const texto = await resp.text();
+    let data;
+    try{ data = JSON.parse(texto); }
+    catch(e){
+      showToast(`Respuesta inesperada (código ${resp.status}). Probablemente falte subir api/discord-post-solicitud-2.js a GitHub.`);
+      console.error(texto);
+      return;
+    }
+    if(data.ok){
+      registrarAuditoria('Publicó el botón de Solicitud de rango (canal 2) en Discord');
       showToast('Mensaje publicado en Discord');
     }else{
       showToast('Error: ' + (data.error || 'no se pudo publicar'));
