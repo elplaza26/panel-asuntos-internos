@@ -18,9 +18,9 @@ export default async function handler(req, res) {
     embeds: [{
       title: '📝 Presolicitud de Ingreso al Cuerpo',
       description:
-        'Esto **no es el ingreso final** — al presionar el botón solo se te asigna el rol de **Preseleccionado**, sin crear ningún expediente todavía.\n\n' +
+        'Esto **no es el ingreso final** — al completar el formulario solo se te asigna el rol de **Preseleccionado**; no se crea ningún expediente todavía.\n\n' +
         '**Pasos a seguir:**\n' +
-        '1. Presiona **Presolicitar** — no hay formulario, es un clic directo.\n' +
+        '1. Presiona **Presolicitar** y completa tus datos.\n' +
         '2. Se te asigna el rol de Preseleccionado.\n' +
         '3. Con ese rol, ve al canal de **"Solicitar rango"** y completa tu ingreso real ahí.',
       color: 3066993,
