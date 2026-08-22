@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OSI Monarca · Panel de Control</title>
+<title>DAI Rebelión · Panel de Control</title>
 <style>
   :root{
     --navy-950:#0b1016;
@@ -38,6 +38,7 @@
     min-height:100vh;
   }
   .app{ display:flex; min-height:100vh; position:relative; }
+
   /* Sidebar */
   .sidebar{
     width:230px; flex-shrink:0;
@@ -90,16 +91,19 @@
     border-left: 2px solid var(--brass);
   }
   nav button.active .n{ color: var(--brass-dim); }
+
   .sidebar-footer{
     margin-top:auto; padding: 16px 22px; border-top:1px solid var(--navy-700);
     font-size: 10.5px; color: var(--steel-600); font-family: var(--font-mono);
     line-height:1.6;
   }
+
   /* Main */
   main{ flex:1; padding: 34px 44px; max-width: 1180px; }
   .view{ display:none; }
   .view.active{ display:block; animation: fade .25s ease; }
   @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
   header.top{
     display:flex; justify-content:space-between; align-items:flex-end;
     margin-bottom: 28px; padding-bottom:16px; border-bottom:1px solid var(--navy-700);
@@ -109,6 +113,7 @@
     font-family: var(--font-mono); font-size:11px; color: var(--paper-dim);
     letter-spacing:1px; text-align:right;
   }
+
   /* Dashboard cards */
   .grid-cards{ display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; margin-bottom:30px; }
   .card{
@@ -123,12 +128,14 @@
   .card .value{ font-family: var(--font-display); font-size: 32px; margin-top:6px; color: var(--brass); }
   .card.alert::before{ background: var(--red); }
   .card.alert .value{ color: var(--red); }
+
   .section-title{
     font-family: var(--font-mono); font-size:11px; letter-spacing:2px;
     color: var(--paper-dim); text-transform:uppercase;
     margin: 30px 0 12px 0; display:flex; align-items:center; gap:10px;
   }
   .section-title::after{ content:''; flex:1; height:1px; background:var(--navy-700); }
+
   /* Table */
   table{ width:100%; border-collapse:collapse; }
   thead th{
@@ -158,6 +165,7 @@
   .pill.leve{ background:rgba(74,144,201,0.16); color:#8ec4ec; border:1px solid rgba(74,144,201,0.45); }
   .pill.grave{ background:rgba(214,138,44,0.2); color:#f0b169; border:1px solid rgba(214,138,44,0.5); }
   .pill.baja{ background:rgba(179,57,44,0.32); color:#ff9d8a; border:1px solid var(--red); font-weight:700; }
+
   /* Alto contraste */
   body.alto-contraste{
     --navy-950:#000000; --navy-900:#0a0a0a; --navy-800:#151515; --navy-700:#2e2e2e;
@@ -170,10 +178,12 @@
   .pill.entrenamiento{ background: rgba(79,122,82,0.15); color:#8fbf92; border:1px solid rgba(79,122,82,0.4); }
   .pill.mision{ background: rgba(201,162,39,0.15); color:var(--brass); border:1px solid rgba(201,162,39,0.4); }
   .pill.operativo{ background: rgba(179,57,44,0.18); color:#e08678; border:1px solid rgba(179,57,44,0.4); }
+
   .empty{
     padding: 40px 20px; text-align:center; color: var(--steel-600);
     font-family: var(--font-mono); font-size:12px; letter-spacing:0.5px;
   }
+
   /* Forms */
   .panel{
     background: var(--navy-900); border:1px solid var(--navy-700); border-radius:6px;
@@ -206,17 +216,21 @@
   .btn.secondary:hover{ color:var(--paper); border-color:var(--steel-600); }
   .btn.danger{ background: var(--red); color:#fff; }
   .btn.danger:hover{ background:#c94636; }
+
   select option{ background: var(--navy-900); }
+
   .evidence-link{
     color: var(--brass); text-decoration:none; font-size:12px; border-bottom:1px dotted var(--brass-dim);
   }
   .evidence-link:hover{ color:#dcb432; }
+
   .row-actions{ display:flex; gap:8px; }
   .icon-btn{
     all:unset; cursor:pointer; color: var(--steel-600); font-size:12px; padding:4px 8px;
     border-radius:3px; border:1px solid var(--navy-700);
   }
   .icon-btn:hover{ color: var(--red); border-color: var(--red-dim); }
+
   .toast{
     position:fixed; bottom:24px; right:24px; background: var(--navy-800);
     border:1px solid var(--brass-dim); color: var(--paper); padding:12px 18px;
@@ -224,6 +238,7 @@
     transition: all .25s ease; pointer-events:none; z-index:50;
   }
   .toast.show{ transform: translateY(0); opacity:1; }
+
   @media(max-width: 900px){
     .app{ flex-direction:column; }
     .sidebar{ width:100%; flex-direction:row; overflow-x:auto; padding:14px; }
@@ -236,6 +251,7 @@
 </style>
 </head>
 <body>
+
 <div id="login-gate" style="min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; text-align:center; padding:24px;">
   <svg viewBox="0 0 48 48" style="width:56px; height:56px;">
     <path d="M24 3 L42 10 V22 C42 34 34 42 24 45 C14 42 6 34 6 22 V10 Z" fill="none" stroke="var(--brass)" stroke-width="1.6"/>
@@ -243,13 +259,15 @@
     <path d="M24 12 L30 15 V23 C30 29 27 33 24 35 C21 33 18 29 18 23 V15 Z" fill="none" stroke="var(--brass)" stroke-width="1.1"/>
     <path d="M24 17 L24 29 M19 23 L29 23" stroke="var(--brass)" stroke-width="1.1"/>
   </svg>
-  <div class="badge-num" style="font-family:var(--font-mono); color:var(--brass); font-size:11px; letter-spacing:2px;">OSI · MPD — ACCESO RESTRINGIDO</div>
-  <h1 style="font-family:var(--font-display); font-size:32px;">OSI Monarca</h1>
-  <p style="color:var(--paper-dim); font-size:13.5px; max-width:340px;">Inicia sesión con tu cuenta de Discord para acceder al panel de la Oficina de Supervisión e Inspección (OSI).</p>
+  <div class="badge-num" style="font-family:var(--font-mono); color:var(--brass); font-size:11px; letter-spacing:2px;">DIV. 7 — ACCESO RESTRINGIDO</div>
+  <h1 style="font-family:var(--font-display); font-size:32px;">DAI Rebelión</h1>
+  <p style="color:var(--paper-dim); font-size:13.5px; max-width:340px;">Inicia sesión con tu cuenta de Discord para acceder al panel de Asuntos Internos.</p>
   <button class="btn" onclick="iniciarLoginDiscord()" style="padding:12px 26px;">Iniciar sesión con Discord</button>
   <div id="login-error" style="color:#e08678; font-size:12px; display:none; max-width:480px; word-break:break-word; line-height:1.6;"></div>
 </div>
+
 <div class="app" id="app-content" style="display:none;">
+
   <aside class="sidebar">
     <div class="brand">
       <svg viewBox="0 0 48 48" style="width:36px; height:36px; margin-bottom:8px;">
@@ -258,9 +276,9 @@
         <path d="M24 12 L30 15 V23 C30 29 27 33 24 35 C21 33 18 29 18 23 V15 Z" fill="none" stroke="var(--brass)" stroke-width="1.3"/>
         <path d="M24 17 L24 29 M19 23 L29 23" stroke="var(--brass)" stroke-width="1.3"/>
       </svg>
-      <div class="badge-num">OSI · MPD</div>
-      <h1>OSI Monarca</h1>
-      <div class="sub">OSI · Panel</div>
+      <div class="badge-num">DIV. 7 — CASO ABIERTO</div>
+      <h1>DAI Rebelión</h1>
+      <div class="sub">Asuntos Internos · Panel</div>
     </div>
     <div style="padding:0 12px 12px 12px; position:relative;">
       <input id="buscador-global" placeholder="Buscar en todo el panel..." oninput="buscarGlobal()" onfocus="buscarGlobal()"
@@ -286,13 +304,16 @@
       <div style="margin-top:10px;">DATOS COMPARTIDOS<br>Visibles para todo el equipo con acceso a este panel.</div>
     </div>
   </aside>
+
   <main>
+
     <!-- PANEL GENERAL -->
     <section class="view active" id="view-panel">
       <header class="top">
         <h2>Panel general</h2>
         <div class="stamp">ACTUALIZADO<br><span id="fecha-actual"></span></div>
       </header>
+
       <div class="section-title">Resumen en vivo</div>
       <div class="grid-cards" style="grid-template-columns: repeat(6, 1fr); margin-bottom:28px;">
         <div class="card">
@@ -320,6 +341,7 @@
           <div class="value" id="stat-ingresos-panel" style="font-size:26px;">0</div>
         </div>
       </div>
+
       <div class="section-title">Actividad y ascensos</div>
       <div class="grid-cards" style="grid-template-columns: 2fr 1fr; margin-bottom:28px; align-items:start;">
         <div class="panel" style="margin-bottom:0;">
@@ -333,11 +355,12 @@
           <div id="alertas-ascenso-panel"></div>
         </div>
       </div>
+
       <div class="panel" style="margin-bottom:28px;">
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleAnuncios()">
           <div>
             <h3 style="margin-bottom:2px;">📢 Gestión de Anuncios</h3>
-            <p style="color:var(--paper-dim); font-size:11.5px;">Publica avisos globales visibles para toda la OSI</p>
+            <p style="color:var(--paper-dim); font-size:11.5px;">Publica avisos globales visibles para todo el DAI</p>
           </div>
           <span id="flecha-anuncios" style="color:var(--brass); font-size:14px;">▾</span>
         </div>
@@ -349,6 +372,7 @@
           <div id="lista-anuncios"></div>
         </div>
       </div>
+
       <div class="section-title">Estadísticas generales</div>
       <div class="panel" style="margin-bottom:28px;">
         <div class="form-grid" style="margin-bottom:20px;">
@@ -361,6 +385,7 @@
             <select id="filtro-departamento" onchange="renderPanel()"><option value="">Todos los departamentos</option></select>
           </div>
         </div>
+
         <div class="grid-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom:24px;">
           <div class="card">
             <div class="label">Agentes registrados</div>
@@ -375,9 +400,11 @@
             <div class="value" id="stat-promedio">0</div>
           </div>
         </div>
+
         <p style="color:var(--paper-dim); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Actividad de bitácoras · últimas 8 semanas</p>
         <div id="panel-grafica"></div>
       </div>
+
       <div class="section-title">Requiere tu atención</div>
       <div class="panel" style="margin-bottom:0;">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
@@ -390,18 +417,22 @@
           </span>
         </div>
         <div id="panel-inactivos" style="margin-bottom:20px;"></div>
+
         <h3 style="border-top:1px solid var(--navy-700); padding-top:20px;">Últimas bitácoras registradas</h3>
         <div id="panel-ultimas-bitacoras" style="margin-bottom:20px;"></div>
+
         <h3 style="border-top:1px solid var(--navy-700); padding-top:20px;">Sanciones recientes</h3>
         <div id="panel-ultimas-sanciones"></div>
       </div>
     </section>
+
     <!-- AGENTES -->
     <section class="view" id="view-agentes">
       <header class="top">
         <h2>Agentes</h2>
         <div class="stamp">EXPEDIENTES<br>DEL SERVIDOR</div>
       </header>
+
       <div class="panel" id="panel-form-agente">
         <h3 id="titulo-form-agente">Registrar nuevo agente</h3>
         <div class="form-grid">
@@ -412,64 +443,63 @@
           <div class="field">
             <label>Rango</label>
             <select id="ag-rango">
-              <optgroup label="Alto Mando">
-                <option value="Ministro">👑 Ministro</option>
-                <option value="Director">⭐ Director</option>
-                <option value="Sub Director">⭐ Sub Director</option>
-                <option value="Jefe Adjunto">⭐ Jefe Adjunto</option>
-                <option value="Jefe Supervisor">⭐ Jefe Supervisor</option>
+              <optgroup label="Alto mando">
+                <option value="Director General">Director General</option>
+                <option value="Sub Director">Sub Director</option>
+                <option value="Jefe Departamento">Jefe Departamento</option>
+                <option value="Sub Jefe de Departamento">Sub Jefe de Departamento</option>
+                <option value="Dev. Discord">Dev. Discord</option>
+                <option value="Staff">Staff</option>
+                <option value="Admin Staff Policial">Admin Staff Policial</option>
               </optgroup>
-              <optgroup label="Oficiales Superiores">
-                <option value="Teniente Coronel">🔴 Teniente Coronel</option>
-                <option value="Capitán">🔴 Capitán</option>
-                <option value="Teniente">🔴 Teniente</option>
+              <optgroup label="DAI">
+                <option value="Pasante DAI">Pasante DAI</option>
+                <option value="Primer Comisario DAI">Primer Comisario DAI</option>
               </optgroup>
-              <optgroup label="Sargentos">
-                <option value="Sargento II">🟠 Sargento II</option>
-                <option value="Sargento I">🟠 Sargento I</option>
+              <optgroup label="Comisarios">
+                <option value="Comisario Superior">Comisario Superior</option>
+                <option value="Comisario General">Comisario General</option>
+                <option value="Primer Comisario">Primer Comisario</option>
+              </optgroup>
+              <optgroup label="Comisionados">
+                <option value="Comisionado Jefe">Comisionado Jefe</option>
+                <option value="Comisionado">Comisionado</option>
+              </optgroup>
+              <optgroup label="Inspectores">
+                <option value="Inspector Jefe">Inspector Jefe</option>
+                <option value="Inspector">Inspector</option>
               </optgroup>
               <optgroup label="Oficiales">
-                <option value="Oficial III">🔵 Oficial III</option>
-                <option value="Oficial II">🔵 Oficial II</option>
-                <option value="Oficial I">🔵 Oficial I</option>
+                <option value="Oficial Jefe">Oficial Jefe</option>
+                <option value="Primer Oficial">Primer Oficial</option>
+                <option value="Oficial">Oficial</option>
+                <option value="AGENTE">AGENTE</option>
               </optgroup>
               <optgroup label="Base">
-                <option value="Cadete">🟢 Cadete</option>
-                <option value="Aspirante">⚪ Aspirante</option>
+                <option value="Cadete">Cadete</option>
+                <option value="Jubilado">Jubilado</option>
+                <option value="POLICIA">POLICIA</option>
               </optgroup>
             </select>
           </div>
-          <div class="field"><label>Sub-división</label><input id="ag-subdivision" placeholder="Ej. OSI"></div>
-          <div class="field"><label>Departamento</label><input id="ag-departamento" placeholder="Ej. ALTO MANDO"></div>
+          <div class="field"><label>Sub-división</label><input id="ag-subdivision" placeholder="Ej. DAI"></div>
+          <div class="field"><label>Departamento</label><input id="ag-departamento" placeholder="Ej. DIRECTIVA"></div>
+
           <div class="field" style="grid-column: span 3;">
             <label>Divisiones (máximo 2 — se suman al rol base de Policía, que siempre lleva)</label>
-            <div style="display:flex; gap:14px; margin-top:8px; flex-wrap:wrap;">
+            <div style="display:flex; gap:18px; margin-top:8px;">
               <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="OSI" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> 🔍 OSI
+                <input type="checkbox" class="ag-division-check" value="DIRECTIVA" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> DIRECTIVA
               </label>
               <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="RAID" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> ⚔️ RAID
+                <input type="checkbox" class="ag-division-check" value="DAI" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> DAI
               </label>
               <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="UAN" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> 💊 UAN
-              </label>
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="SIES" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> 🕵️ SIES
-              </label>
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="DAAR" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> 🏎️ DAAR
-              </label>
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="UMC" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> 🤝 UMC
-              </label>
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="DST" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> 🚁 DST
-              </label>
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px;">
-                <input type="checkbox" class="ag-division-check" value="TSJ" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> ⚖️ TSJ
+                <input type="checkbox" class="ag-division-check" value="CICPC" onchange="validarMaxDivisiones(this)" style="width:16px; height:16px; accent-color:var(--brass);"> CICPC
               </label>
             </div>
           </div>
+
           <div class="field" style="grid-column: span 3;">
             <label>Roles adicionales (como en Discord — puede tener varios a la vez)</label>
             <div id="ag-roles-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin:8px 0;"></div>
@@ -480,12 +510,14 @@
               <button type="button" class="btn secondary" onclick="agregarRolExtra()">Agregar</button>
             </div>
           </div>
+
           <div class="field" style="display:flex; gap:8px;">
             <button class="btn" id="btn-guardar-agente" onclick="addAgente()">Registrar</button>
             <button class="btn secondary" id="btn-cancelar-edicion" onclick="cancelarEdicionAgente()" style="display:none;">Cancelar</button>
           </div>
         </div>
       </div>
+
       <div class="panel">
         <h3>Importar agentes desde Excel</h3>
         <div class="form-grid">
@@ -499,22 +531,27 @@
           El archivo debe tener columnas llamadas <strong>NRO PLACA</strong>, <strong>NOMBRE IC</strong>, <strong>JERARQUÍA</strong>, <strong>NOMBRE OOC</strong> y <strong>DISCORD</strong> (no importa el orden). Los agentes con la misma placa se actualizan en vez de duplicarse. Las filas sin nombre se ignoran.
         </div>
       </div>
+
       <div class="section-title">Buscar agente</div>
       <div class="form-grid" style="margin-bottom:16px;">
         <div class="field" style="grid-column: span 2;">
           <input id="buscar-agente" placeholder="Buscar por placa o nombre..." oninput="renderAgentesTabla()">
         </div>
       </div>
+
       <div id="tabla-agentes"></div>
+
       <div class="section-title">Historial de cambios de rango</div>
       <div id="tabla-historial-rangos"></div>
     </section>
+
     <!-- BITACORAS -->
     <section class="view" id="view-bitacoras">
       <header class="top">
         <h2>Bitácoras</h2>
         <div class="stamp">REGISTRO DE<br>MARCAJE</div>
       </header>
+
       <div class="grid-cards">
         <div class="card">
           <div class="label">Turnos completados</div>
@@ -529,6 +566,7 @@
           <div class="value" id="stat-en-servicio">0</div>
         </div>
       </div>
+
       <div class="panel">
         <h3>Publicar botones de Entrada/Salida en Discord</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
@@ -539,8 +577,10 @@
           <div class="field"><button class="btn secondary" onclick="publicarPanelDiscord()">Publicar en Discord</button></div>
         </div>
       </div>
+
       <div class="section-title">En servicio (activos)</div>
       <div id="tabla-en-servicio"></div>
+
       <div class="panel">
         <h3>Registrar bitácora / marcaje</h3>
         <div class="form-grid">
@@ -562,15 +602,18 @@
           <div class="field"><button class="btn" onclick="addBitacora()">Registrar</button></div>
         </div>
       </div>
+
       <div class="section-title">Historial</div>
       <div id="tabla-bitacoras"></div>
     </section>
+
     <!-- SANCIONES -->
     <section class="view" id="view-sanciones">
       <header class="top">
         <h2>Sanciones</h2>
         <div class="stamp">EXPEDIENTES<br>DISCIPLINARIOS</div>
       </header>
+
       <div class="panel">
         <h3>Canales de avisos en Discord</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
@@ -582,6 +625,7 @@
           <div class="field"><button class="btn secondary" onclick="guardarCanalSanciones()">Guardar canales</button></div>
         </div>
       </div>
+
       <div class="panel">
         <h3>Roles de Discord por nivel de sanción</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
@@ -598,11 +642,13 @@
           <div class="field"><button class="btn secondary" onclick="guardarRolesSancion()">Guardar roles</button></div>
         </div>
       </div>
+
       <div class="panel" id="panel-sanciones-pendientes-directiva" style="display:none;">
         <h3>⏳ Sanciones pendientes de aprobación</h3>
-        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Las sanciones aplicadas por la OSI (sin rol Directiva) quedan aquí hasta que las apruebes o rechaces.</p>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Las sanciones aplicadas por el DAI (sin rol Directiva) quedan aquí hasta que las apruebes o rechaces.</p>
         <div id="tabla-sanciones-pendientes"></div>
       </div>
+
       <div class="panel">
         <h3>Aplicar sanción</h3>
         <div class="form-grid">
@@ -624,14 +670,17 @@
           <div class="field"><button class="btn danger" onclick="addSancion()">Aplicar sanción</button></div>
         </div>
       </div>
+
       <div id="tabla-sanciones"></div>
     </section>
+
     <!-- DENUNCIAS -->
     <section class="view" id="view-denuncias">
       <header class="top">
         <h2>Denuncias</h2>
         <div class="stamp">CHECKLIST DE<br>EVIDENCIA</div>
       </header>
+
       <div class="grid-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom:24px;">
         <div class="card">
           <div class="label">Total validadas (todos los agentes)</div>
@@ -646,6 +695,7 @@
           <div class="value" id="stat-denuncias-completos">0</div>
         </div>
       </div>
+
       <div class="panel">
         <h3>Selecciona un agente</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
@@ -669,15 +719,18 @@
           </div>
         </div>
       </div>
+
       <div class="panel" id="panel-checklist-denuncias" style="display:none;">
         <h3 style="margin:0 0 4px 0;">Denuncias/evidencias — <span id="de-nombre-agente"></span></h3>
         <p style="color:var(--paper-dim); font-size:11.5px; margin-bottom:18px;">Escribe el número en cada casilla. Clic en el símbolo para marcarla: vacío → ✓ válida → ✗ rechazada → vacío otra vez.</p>
+
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
           <h4 style="margin:0; color:var(--brass); font-family:var(--font-display); font-size:15px;">📋 Denuncias</h4>
           <button class="btn danger" style="padding:6px 14px; font-size:10.5px;" onclick="reiniciarChecklist('denuncias')">Reiniciar las 20 casillas</button>
         </div>
         <div id="grid-checks-denuncias" style="display:grid; grid-template-columns: repeat(10, 1fr); gap:8px; margin-bottom:8px;"></div>
         <div class="mono" style="color:var(--brass); font-size:13px; margin-bottom:22px;"><span id="conteo-denuncias">0</span> / 20 validadas</div>
+
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px; padding-top:14px; border-top:1px solid var(--navy-700);">
           <h4 style="margin:0; color:var(--brass); font-family:var(--font-display); font-size:15px;">🗂️ Evidencias</h4>
           <button class="btn danger" style="padding:6px 14px; font-size:10.5px;" onclick="reiniciarChecklist('evidencias')">Reiniciar las 20 casillas</button>
@@ -686,12 +739,14 @@
         <div class="mono" style="color:var(--brass); font-size:13px;"><span id="conteo-evidencias">0</span> / 20 validadas</div>
       </div>
     </section>
+
     <!-- BONOS -->
     <section class="view" id="view-bonos">
       <header class="top">
         <h2>Bonos</h2>
         <div class="stamp">PAGOS AL<br>PERSONAL</div>
       </header>
+
       <div class="grid-cards" style="grid-template-columns: repeat(2, 1fr); margin-bottom:24px;">
         <div class="card">
           <div class="label">Bonos pagados</div>
@@ -702,6 +757,7 @@
           <div class="value" id="stat-bonos-total">$0</div>
         </div>
       </div>
+
       <div class="panel">
         <h3>Registrar pago de bono</h3>
         <div class="form-grid">
@@ -722,25 +778,30 @@
           <div class="field"><button class="btn" onclick="addBono()">Registrar pago</button></div>
         </div>
       </div>
+
       <div class="section-title">Buscar pago</div>
       <div class="form-grid" style="margin-bottom:16px;">
         <div class="field" style="grid-column: span 2;">
           <input id="buscar-bono" placeholder="Buscar por placa, agente o periodo..." oninput="renderBonosTabla()">
         </div>
       </div>
+
       <div id="tabla-bonos"></div>
     </section>
+
     <!-- ASCENSOS -->
     <section class="view" id="view-ascensos">
       <header class="top">
         <h2>Ascensos</h2>
         <div class="stamp">AUTOMATIZACIÓN<br>DE RANGOS</div>
       </header>
+
       <div class="panel" id="panel-ascensos-pendientes-directiva" style="display:none;">
         <h3>⏳ Ascensos pendientes de aprobación</h3>
-        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Los ascensos ejecutados por la OSI (sin rol Directiva) quedan aquí hasta que los apruebes o rechaces.</p>
+        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Los ascensos ejecutados por el DAI (sin rol Directiva) quedan aquí hasta que los apruebes o rechaces.</p>
         <div id="tabla-ascensos-pendientes"></div>
       </div>
+
       <div class="panel">
         <h3>Ascenso manual</h3>
         <div class="form-grid">
@@ -751,30 +812,42 @@
           <div class="field">
             <label>Rango de destino</label>
             <select id="asc-rango-destino">
-              <optgroup label="Alto Mando">
-                <option value="Ministro">👑 Ministro</option>
-                <option value="Director">⭐ Director</option>
-                <option value="Sub Director">⭐ Sub Director</option>
-                <option value="Jefe Adjunto">⭐ Jefe Adjunto</option>
-                <option value="Jefe Supervisor">⭐ Jefe Supervisor</option>
+              <optgroup label="Alto mando">
+                <option value="Director General">Director General</option>
+                <option value="Sub Director">Sub Director</option>
+                <option value="Jefe Departamento">Jefe Departamento</option>
+                <option value="Sub Jefe de Departamento">Sub Jefe de Departamento</option>
+                <option value="Dev. Discord">Dev. Discord</option>
+                <option value="Staff">Staff</option>
+                <option value="Admin Staff Policial">Admin Staff Policial</option>
               </optgroup>
-              <optgroup label="Oficiales Superiores">
-                <option value="Teniente Coronel">🔴 Teniente Coronel</option>
-                <option value="Capitán">🔴 Capitán</option>
-                <option value="Teniente">🔴 Teniente</option>
+              <optgroup label="DAI">
+                <option value="Pasante DAI">Pasante DAI</option>
+                <option value="Primer Comisario DAI">Primer Comisario DAI</option>
               </optgroup>
-              <optgroup label="Sargentos">
-                <option value="Sargento II">🟠 Sargento II</option>
-                <option value="Sargento I">🟠 Sargento I</option>
+              <optgroup label="Comisarios">
+                <option value="Comisario Superior">Comisario Superior</option>
+                <option value="Comisario General">Comisario General</option>
+                <option value="Primer Comisario">Primer Comisario</option>
+              </optgroup>
+              <optgroup label="Comisionados">
+                <option value="Comisionado Jefe">Comisionado Jefe</option>
+                <option value="Comisionado">Comisionado</option>
+              </optgroup>
+              <optgroup label="Inspectores">
+                <option value="Inspector Jefe">Inspector Jefe</option>
+                <option value="Inspector">Inspector</option>
               </optgroup>
               <optgroup label="Oficiales">
-                <option value="Oficial III">🔵 Oficial III</option>
-                <option value="Oficial II">🔵 Oficial II</option>
-                <option value="Oficial I">🔵 Oficial I</option>
+                <option value="Oficial Jefe">Oficial Jefe</option>
+                <option value="Primer Oficial">Primer Oficial</option>
+                <option value="Oficial">Oficial</option>
+                <option value="AGENTE">AGENTE</option>
               </optgroup>
               <optgroup label="Base">
-                <option value="Cadete">🟢 Cadete</option>
-                <option value="Aspirante">⚪ Aspirante</option>
+                <option value="Cadete">Cadete</option>
+                <option value="Jubilado">Jubilado</option>
+                <option value="POLICIA">POLICIA</option>
               </optgroup>
             </select>
           </div>
@@ -783,12 +856,14 @@
           <div class="field"><button class="btn" onclick="ejecutarAscensoManual()">Ejecutar ascenso</button></div>
         </div>
       </div>
+
       <div class="panel" id="panel-requisitos-ascenso">
         <h3>Requisitos de días por rango</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">Define cuántos días mínimos debe tener un agente en su rango actual para aparecer como "elegible". Deja en 0 los rangos que no aplican (ej. el más alto).</p>
         <div id="form-requisitos" class="form-grid"></div>
         <button class="btn secondary" style="margin-top:14px;" onclick="guardarRequisitos()">Guardar requisitos</button>
       </div>
+
       <div class="panel" id="panel-roles-discord-rango">
         <h3>Roles de Discord por rango</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
@@ -805,38 +880,28 @@
         <div id="form-roles-discord" class="form-grid"></div>
         <button class="btn secondary" style="margin-top:14px;" onclick="guardarRolesDiscord()">Guardar roles de Discord</button>
       </div>
-      <div class="panel" id="panel-roles-discord-division">
-        <h3>Roles de Discord por división y canal de ascensos</h3>
-        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
-          Pega el ID del rol de Discord de cada división. Cuando marques o desmarques divisiones en la ficha de un agente, el sistema
-          <strong>agrega o quita esos roles automáticamente</strong> en Discord. También pega el canal donde se publican los avisos de ascenso.
-        </p>
-        <div class="form-grid" style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--navy-700);">
-          <div class="field" style="grid-column: span 3;">
-            <label>Canal de anuncios de ascensos</label>
-            <input id="canal-ascensos-id" placeholder="ID del canal en Discord">
-          </div>
-        </div>
-        <div id="form-roles-division" class="form-grid"></div>
-        <button class="btn secondary" style="margin-top:14px;" onclick="guardarRolesDivision()">Guardar roles de división</button>
-      </div>
+
       <div class="section-title">
         Acciones globales
         <span style="display:flex; align-items:center; gap:6px; flex:none; text-transform:none; letter-spacing:0;">
           <button class="btn danger" onclick="reiniciarRelojes()">Reiniciar relojes (todos a 0d)</button>
         </span>
       </div>
+
       <div class="section-title">Oficiales elegibles para ascenso</div>
       <div id="tabla-elegibles"></div>
+
       <div class="section-title">En progreso</div>
       <div id="tabla-en-progreso"></div>
     </section>
+
     <!-- NUEVOS INGRESOS -->
     <section class="view" id="view-ingresos">
       <header class="top">
         <h2>Nuevos Ingresos</h2>
         <div class="stamp">SOLICITUDES<br>DE RANGO</div>
       </header>
+
       <div class="panel">
         <h3>Publicar solicitud de ingreso en Discord</h3>
         <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
@@ -847,25 +912,18 @@
           <div class="field"><button class="btn secondary" onclick="publicarSolicitudDiscord()">Publicar en Discord</button></div>
         </div>
       </div>
-      <div class="panel">
-        <h3>Rol de "Preseleccionado"</h3>
-        <p style="color:var(--paper-dim); font-size:12px; margin-bottom:14px;">
-          Al aprobar una solicitud de ingreso, se le asigna únicamente este rol en Discord (no el rol de rango) — queda como marca de que fue preseleccionado. Vos lo sacás manualmente más adelante cuando corresponda.
-        </p>
-        <div class="form-grid">
-          <div class="field" style="grid-column: span 2;"><label>ID del rol "Preseleccionado"</label><input id="rol-preseleccionado" placeholder="ID del rol en Discord"></div>
-          <div class="field"><button class="btn secondary" onclick="guardarRolPreseleccionado()">Guardar rol</button></div>
-        </div>
-      </div>
+
       <div class="section-title">Solicitudes de ingreso pendientes</div>
       <div id="tabla-pendientes-ingreso"></div>
     </section>
+
     <!-- AUSENCIAS -->
     <section class="view" id="view-ausencias">
       <header class="top">
         <h2>Ausencias</h2>
         <div class="stamp">JUSTIFICACIONES<br>DEL PERSONAL</div>
       </header>
+
       <div class="panel">
         <h3>Registrar ausencia</h3>
         <div class="form-grid">
@@ -879,9 +937,11 @@
           <div class="field"><button class="btn" onclick="addAusencia()">Registrar</button></div>
         </div>
       </div>
+
       <div class="section-title">Historial de ausencias</div>
       <div id="tabla-ausencias"></div>
     </section>
+
     <!-- HISTORIAL (solo Directiva) -->
     <section class="view" id="view-historial">
       <header class="top">
@@ -891,13 +951,15 @@
       <div class="section-title">Todas las acciones registradas en el panel</div>
       <div id="tabla-historial-completo"></div>
     </section>
+
   </main>
 </div>
+
 <div class="app" id="app-policia" style="display:none;">
   <aside class="sidebar">
     <div class="brand">
-      <div class="badge-num">OSI · MPD — CONSULTA PERSONAL</div>
-      <h1>OSI Monarca</h1>
+      <div class="badge-num">DIV. 7 — CONSULTA PERSONAL</div>
+      <h1>DAI Rebelión</h1>
       <div class="sub">Mi expediente</div>
     </div>
     <div class="sidebar-footer">
@@ -906,23 +968,28 @@
       <div style="margin-top:10px;">SOLO LECTURA<br>No puedes modificar esta información.</div>
     </div>
   </aside>
+
   <main>
     <section class="view active">
       <header class="top">
         <h2>Mi expediente</h2>
         <div class="stamp">CONSULTA<br>PERSONAL</div>
       </header>
+
       <div id="policia-sin-registro" class="empty" style="display:none;">
-        No encontramos un agente registrado con tu cuenta de Discord. Contacta a la OSI para que verifiquen tu registro.
+        No encontramos un agente registrado con tu cuenta de Discord. Contacta a Asuntos Internos para que verifiquen tu registro.
       </div>
+
       <div class="panel" id="panel-anuncios-policia" style="display:none;">
-        <h3>📢 Anuncios de la OSI</h3>
+        <h3>📢 Anuncios del DAI</h3>
         <div id="policia-anuncios" style="margin-top:12px;"></div>
       </div>
+
       <div class="panel" id="panel-control-turno" style="display:none;">
         <h3>Control de turno</h3>
         <div id="turno-estado"></div>
       </div>
+
       <div class="panel" id="panel-registrar-ausencia" style="display:none;">
         <h3>Registrar una ausencia</h3>
         <div class="form-grid">
@@ -932,52 +999,63 @@
           <div class="field"><button class="btn" onclick="registrarMiAusencia()">Registrar</button></div>
         </div>
       </div>
+
       <div id="policia-info"></div>
+
       <div class="section-title">Mis bitácoras</div>
       <div id="policia-bitacoras"></div>
+
       <div class="section-title">Mis sanciones</div>
       <div id="policia-sanciones"></div>
+
       <div class="section-title">Mis bonos</div>
       <div id="policia-bonos"></div>
+
       <div class="section-title">Mis ausencias</div>
       <div id="policia-ausencias"></div>
     </section>
   </main>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyDtyVyM9PxzxgAT1kueCnxsLzK-H3GGBDw",
-  authDomain: "osi-monarca.firebaseapp.com",
-  projectId: "osi-monarca",
-  storageBucket: "osi-monarca.firebasestorage.app",
-  messagingSenderId: "533982665860",
-  appId: "1:533982665860:web:a4f5c2dcb37bc4cf4cb6d1"
+  apiKey: "AIzaSyDH1yulaQa9sqCPWqhOEN-wW4Sv35lKf2A",
+  authDomain: "asuntos-internos-d423d.firebaseapp.com",
+  projectId: "asuntos-internos-d423d",
+  storageBucket: "asuntos-internos-d423d.firebasestorage.app",
+  messagingSenderId: "762492805556",
+  appId: "1:762492805556:web:d8ce3f74b8f857b89b92e1"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
 // ---------- AUTENTICACIÓN CON DISCORD ----------
-const DISCORD_CLIENT_ID = '1540484542354428025';
-const REDIRECT_URI = 'https://osi-monarca-panel.vercel.app/';
+const DISCORD_CLIENT_ID = '1535661121724227604';
+const REDIRECT_URI = 'https://panel-asuntos-internos.vercel.app/';
 let usuarioActual = null;
 let auditoria = [];
 let miAgenteId = null;
 let turnoActivo = null;
+
 function iniciarLoginDiscord(){
   const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
   window.location.href = url;
 }
+
 function cerrarSesion(){
-  localStorage.removeItem('osiUsuario');
+  localStorage.removeItem('daiUsuario');
   usuarioActual = null;
   window.location.href = REDIRECT_URI;
 }
+
 async function initAuth(){
-  const guardado = localStorage.getItem('osiUsuario');
+  const guardado = localStorage.getItem('daiUsuario');
   if(guardado){
     usuarioActual = JSON.parse(guardado);
     // Esperamos a que Firebase confirme que la sesión guardada de la vez anterior sigue viva
@@ -986,13 +1064,14 @@ async function initAuth(){
         mostrarApp();
       }else{
         // La credencial de la base de datos se perdió (ej. se borraron datos del navegador) — hay que iniciar sesión de nuevo
-        localStorage.removeItem('osiUsuario');
+        localStorage.removeItem('daiUsuario');
         usuarioActual = null;
         mostrarLogin();
       }
     });
     return;
   }
+
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   if(code){
@@ -1011,7 +1090,7 @@ async function initAuth(){
           return;
         }
         usuarioActual = data;
-        localStorage.setItem('osiUsuario', JSON.stringify(data));
+        localStorage.setItem('daiUsuario', JSON.stringify(data));
         window.history.replaceState({}, document.title, REDIRECT_URI);
         mostrarApp();
         return;
@@ -1024,11 +1103,14 @@ async function initAuth(){
       mostrarErrorLogin('Error al conectar con el servidor de login.');
     }
   }
+
   mostrarLogin();
 }
+
 function mostrarApp(){
   document.getElementById('login-gate').style.display = 'none';
-  if(usuarioActual && usuarioActual.esOsi){
+
+  if(usuarioActual && usuarioActual.esDai){
     document.getElementById('app-content').style.display = 'flex';
     const badge = document.getElementById('usuario-actual');
     if(badge){
@@ -1037,13 +1119,11 @@ function mostrarApp(){
     const esDirectiva = !!usuarioActual.esDirectiva;
     const panelRequisitos = document.getElementById('panel-requisitos-ascenso');
     const panelRolesRango = document.getElementById('panel-roles-discord-rango');
-    const panelRolesDivision = document.getElementById('panel-roles-discord-division');
     const panelAscensosPendientes = document.getElementById('panel-ascensos-pendientes-directiva');
     const panelSancionesPendientes = document.getElementById('panel-sanciones-pendientes-directiva');
     const navHistorial = document.getElementById('nav-historial');
     if(panelRequisitos) panelRequisitos.style.display = esDirectiva ? 'block' : 'none';
     if(panelRolesRango) panelRolesRango.style.display = esDirectiva ? 'block' : 'none';
-    if(panelRolesDivision) panelRolesDivision.style.display = esDirectiva ? 'block' : 'none';
     if(panelAscensosPendientes) panelAscensosPendientes.style.display = esDirectiva ? 'block' : 'none';
     if(panelSancionesPendientes) panelSancionesPendientes.style.display = esDirectiva ? 'block' : 'none';
     if(navHistorial) navHistorial.style.display = esDirectiva ? 'flex' : 'none';
@@ -1057,16 +1137,19 @@ function mostrarApp(){
     initListenersPolicia();
   }
 }
+
 function mostrarLogin(){
   document.getElementById('login-gate').style.display = 'flex';
   document.getElementById('app-content').style.display = 'none';
 }
+
 function mostrarErrorLogin(msg){
   const el = document.getElementById('login-error');
   el.textContent = msg;
   el.style.display = 'block';
   mostrarLogin();
 }
+
 async function registrarAuditoria(accion){
   try{
     await db.collection('auditoria').doc(uid()).set({
@@ -1077,6 +1160,7 @@ async function registrarAuditoria(accion){
     });
   }catch(e){ /* no interrumpe la acción principal si falla el registro */ }
 }
+
 let agentes = [];
 let bitacoras = [];
 let sanciones = [];
@@ -1092,18 +1176,17 @@ let requisitosAscenso = {};
 let ascensosPendientes = [];
 let rolesDiscordPorRango = {};
 let rolBasePolicia = '';
-let canalAscensosId = '';
-let rolesDivisionPorDivision = {};
-let rolPreseleccionadoId = '';
+
 const RANGOS_ORDEN = [
-  'Ministro','Director','Sub Director','Jefe Adjunto','Jefe Supervisor',
-  'Teniente Coronel','Capitán','Teniente',
-  'Sargento II','Sargento I',
-  'Oficial III','Oficial II','Oficial I',
-  'Cadete','Aspirante'
+  'Director General','Sub Director','Jefe Departamento','Sub Jefe de Departamento','Dev. Discord','Staff','Admin Staff Policial',
+  'Pasante DAI','Primer Comisario DAI',
+  'Comisario Superior','Comisario General','Primer Comisario',
+  'Comisionado Jefe','Comisionado',
+  'Inspector Jefe','Inspector',
+  'Oficial Jefe','Primer Oficial','Oficial','AGENTE',
+  'Cadete','Jubilado','POLICIA'
 ];
-const DIVISIONES_ORDEN = ['OSI','RAID','UAN','SIES','DAAR','UMC','DST','TSJ'];
-const DIVISIONES_EMOJI = { OSI:'🔍', RAID:'⚔️', UAN:'💊', SIES:'🕵️', DAAR:'🏎️', UMC:'🤝', DST:'🚁', TSJ:'⚖️' };
+
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -1115,12 +1198,15 @@ function fmtDate(d){
   const [y,m,day] = d.split('-');
   return `${day}/${m}/${y}`;
 }
+
 function fmtHora(timestamp){
   if(!timestamp) return '—';
   const d = new Date(timestamp);
   return d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
 }
+
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 function fmtPeriodo(periodicidad, valor){
   if(!valor) return '—';
   if(periodicidad === 'Semanal' && valor.includes('-W')){
@@ -1133,39 +1219,47 @@ function fmtPeriodo(periodicidad, valor){
   }
   return valor;
 }
+
 function actualizarTipoPeriodo(){
   const periodicidad = document.getElementById('bo-periodicidad').value;
   const input = document.getElementById('bo-periodo');
   input.type = periodicidad === 'Semanal' ? 'week' : 'month';
   input.value = '';
 }
+
 // ---------- STORAGE (Firestore, en tiempo real) ----------
 function initListeners(){
   db.collection('agentes').onSnapshot(snap=>{
     agentes = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('bitacoras').onSnapshot(snap=>{
     bitacoras = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('sanciones').onSnapshot(snap=>{
     sanciones = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('bonos').onSnapshot(snap=>{
     bonos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAll();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('ausencias').onSnapshot(snap=>{
     ausencias = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAusenciasTabla();
     renderPanel();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('anuncios').onSnapshot(snap=>{
     anuncios = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAnuncios();
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('denunciasChecklist').onSnapshot(snap=>{
     denunciasChecklists = {};
     snap.docs.forEach(d=>{ denunciasChecklists[d.id] = d.data(); });
@@ -1179,22 +1273,27 @@ function initListeners(){
       renderGridChecks('evidencias');
     }
   }, ()=>showToast('Error de conexión con la base de datos'));
+
   db.collection('auditoria').onSnapshot(snap=>{
     auditoria = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderHistorialCompleto();
   }, ()=>{});
+
   db.collection('historialRangos').onSnapshot(snap=>{
     historialRangos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderHistorialRangos();
   }, ()=>{});
+
   db.collection('ascensosPendientes').onSnapshot(snap=>{
     ascensosPendientes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAscensosPendientes();
   }, ()=>{});
+
   db.collection('sancionesPendientes').onSnapshot(snap=>{
     sancionesPendientes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderSancionesPendientes();
   }, ()=>{});
+
   db.collection('config').doc('requisitosAscenso').onSnapshot(doc=>{
     const datos = doc.exists ? doc.data() : {};
     const crudo = datos.requisitos || datos.dias || {}; // "dias" es el campo viejo (solo números sueltos)
@@ -1209,6 +1308,7 @@ function initListeners(){
     renderRequisitosForm();
     renderAscensos();
   }, ()=>{});
+
   db.collection('config').doc('rolesDiscord').onSnapshot(doc=>{
     const datos = doc.exists ? doc.data() : {};
     rolesDiscordPorRango = datos.roles || {};
@@ -1217,20 +1317,7 @@ function initListeners(){
     if(inputBase && !inputBase.value) inputBase.value = rolBasePolicia;
     renderRolesDiscordForm();
   }, ()=>{});
-  db.collection('config').doc('rolesIngreso').onSnapshot(doc=>{
-    const datos = doc.exists ? doc.data() : {};
-    rolPreseleccionadoId = datos.rolPreseleccionado || '';
-    const inputPresel = document.getElementById('rol-preseleccionado');
-    if(inputPresel && !inputPresel.value) inputPresel.value = rolPreseleccionadoId;
-  }, ()=>{});
-  db.collection('config').doc('rolesDivision').onSnapshot(doc=>{
-    const datos = doc.exists ? doc.data() : {};
-    rolesDivisionPorDivision = datos.roles || {};
-    canalAscensosId = datos.canalAscensos || '';
-    const inputCanal = document.getElementById('canal-ascensos-id');
-    if(inputCanal && !inputCanal.value) inputCanal.value = canalAscensosId;
-    renderRolesDivisionForm();
-  }, ()=>{});
+
   db.collection('config').doc('canalSanciones').onSnapshot(doc=>{
     const datos = doc.exists ? doc.data() : {};
     canalStrikesId = datos.canalStrikes || '';
@@ -1240,6 +1327,7 @@ function initListeners(){
     if(inputStrikes && !inputStrikes.value) inputStrikes.value = canalStrikesId;
     if(inputWarnings && !inputWarnings.value) inputWarnings.value = canalWarningsId;
   }, ()=>{});
+
   db.collection('config').doc('rolesSancion').onSnapshot(doc=>{
     rolesSancionPorTipo = doc.exists ? (doc.data().roles || {}) : {};
     const mapa = {
@@ -1253,6 +1341,7 @@ function initListeners(){
     });
   }, ()=>{});
 }
+
 // ---------- ACTIONS ----------
 function validarMaxDivisiones(checkbox){
   const checks = document.querySelectorAll('.ag-division-check');
@@ -1263,6 +1352,7 @@ function validarMaxDivisiones(checkbox){
     showToast('Máximo 2 divisiones por agente');
   }
 }
+
 async function addAgente(){
   const placa = document.getElementById('ag-placa').value.trim();
   const nombre = document.getElementById('ag-nombre').value.trim();
@@ -1292,6 +1382,7 @@ async function addAgente(){
     showToast(anterior ? 'Cambios guardados' : 'Agente registrado');
   }catch(e){ showToast('Error al guardar el agente'); }
 }
+
 async function registrarCambioRango(agenteId, agenteNombre, rangoAnterior, rangoNuevo){
   try{
     await db.collection('historialRangos').doc(uid()).set({
@@ -1301,11 +1392,13 @@ async function registrarCambioRango(agenteId, agenteNombre, rangoAnterior, rango
     });
   }catch(e){ /* no interrumpe el flujo principal */ }
 }
+
 function normalizarTexto(s){
   return String(s==null ? '' : s)
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .trim().toUpperCase().replace(/\s+/g,' ');
 }
+
 async function importarExcel(){
   const fileInput = document.getElementById('import-file');
   const file = fileInput.files[0];
@@ -1315,6 +1408,7 @@ async function importarExcel(){
     const wb = XLSX.read(buffer, { type:'array' });
     const hoja = wb.Sheets[wb.SheetNames[0]];
     const filasCrudas = XLSX.utils.sheet_to_json(hoja, { header:1, defval:'', raw:false });
+
     // Buscar la fila real de encabezados (puede no ser la primera si hay títulos o filas decorativas antes)
     let idxEncabezado = -1;
     for(let i=0; i<Math.min(filasCrudas.length, 20); i++){
@@ -1325,8 +1419,10 @@ async function importarExcel(){
       showToast('No se encontró la columna "NOMBRE IC" en el archivo');
       return;
     }
+
     const encabezados = filasCrudas[idxEncabezado].map(normalizarTexto);
     const filasDatos = filasCrudas.slice(idxEncabezado+1);
+
     function col(palabraClave, fila){
       for(let i=0;i<encabezados.length;i++){
         if(encabezados[i] && encabezados[i].includes(palabraClave)){
@@ -1336,11 +1432,13 @@ async function importarExcel(){
       }
       return '';
     }
+
     let importados = 0;
     let sinPlaca = 0;
     let batch = db.batch();
     let opsEnBatch = 0;
     let cambiosRango = 0;
+
     for(const fila of filasDatos){
       const nombre = col('NOMBRE IC', fila);
       if(!nombre) continue;
@@ -1350,9 +1448,11 @@ async function importarExcel(){
       const discord = col('DISCORD', fila);
       const subdivision = col('DIVISION', fila);
       const departamento = col('DEPARTAMENTO', fila);
+
       if(!placa) sinPlaca++;
       // Si no hay placa, usamos el nombre normalizado como ID para que reimportar no duplique
       const id = placa ? ('placa-'+placa) : ('nombre-'+normalizarTexto(nombre).replace(/\s+/g,'-'));
+
       const anterior = agentes.find(a=>a.id===id);
       if(anterior && anterior.rango && rango && anterior.rango !== rango){
         batch.set(db.collection('historialRangos').doc(uid()), {
@@ -1364,6 +1464,7 @@ async function importarExcel(){
         cambiosRango++;
         opsEnBatch++;
       }
+
       batch.set(db.collection('agentes').doc(id), {
         placa, nombre, rango, nombreOOC, discord, subdivision, departamento,
         estado: 'activo', creado: Date.now()
@@ -1377,6 +1478,7 @@ async function importarExcel(){
       }
     }
     if(opsEnBatch > 0) await batch.commit();
+
     fileInput.value = '';
     if(importados === 0){
       showToast('No se encontraron filas válidas');
@@ -1390,6 +1492,7 @@ async function importarExcel(){
     showToast('Error al leer el archivo');
   }
 }
+
 async function toggleEstadoAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
@@ -1413,9 +1516,11 @@ async function toggleEstadoAgente(id){
   }
   catch(e){ showToast('Error al actualizar'); }
 }
+
 async function expulsarAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
+
   // Si NO es Directiva, la expulsión queda pendiente de aprobación (misma regla que las sanciones)
   if(!usuarioActual?.esDirectiva){
     if(!confirm(`¿Enviar la expulsión de ${ag.nombre} a Directiva para su aprobación?`)) return;
@@ -1431,6 +1536,7 @@ async function expulsarAgente(id){
     }catch(e){ showToast('Error al enviar la solicitud de expulsión'); }
     return;
   }
+
   // Directiva: se aplica directo
   if(!confirm(`¿Expulsar a ${ag.nombre} del cuerpo?\n\nSe le van a quitar TODOS sus roles de Discord y va a quedar únicamente con el rol de "Expulsado" — no va a poder ver ningún canal del servidor. Esta acción es fuerte, confírmala con cuidado.`)) return;
   try{
@@ -1447,6 +1553,7 @@ async function expulsarAgente(id){
     }
   }catch(e){ showToast('Error al expulsar'); }
 }
+
 async function eliminarAgente(id){
   const nombre = nombreAgente(id);
   if(!confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer. Sus bitácoras, sanciones y bonos se quedarán, pero ya no se verán ligados a un agente activo.`)) return;
@@ -1456,7 +1563,9 @@ async function eliminarAgente(id){
   }
   catch(e){ showToast('Error al eliminar'); }
 }
+
 let rolesExtraFormulario = [];
+
 function renderChipsRolesExtra(){
   const el = document.getElementById('ag-roles-chips');
   if(!el) return;
@@ -1466,6 +1575,7 @@ function renderChipsRolesExtra(){
       <span style="cursor:pointer; color:#e08678; font-weight:700;" onclick="quitarRolExtra('${r.replace(/'/g,"\\'")}')">×</span>
     </span>`).join('') : '<span style="color:var(--paper-dim); font-size:11.5px;">Sin roles adicionales todavía.</span>';
 }
+
 function agregarRolExtra(){
   const input = document.getElementById('ag-rol-nuevo');
   const v = input.value.trim();
@@ -1474,15 +1584,18 @@ function agregarRolExtra(){
   input.value = '';
   renderChipsRolesExtra();
 }
+
 function quitarRolExtra(rol){
   rolesExtraFormulario = rolesExtraFormulario.filter(r=>r!==rol);
   renderChipsRolesExtra();
 }
+
 function renderPendientesIngreso(){
   const el = document.getElementById('tabla-pendientes-ingreso');
   if(!el) return;
   const pendientes = agentes.filter(a=>a.estado==='pendiente');
   if(!pendientes.length){ el.innerHTML = '<div class="empty">No hay solicitudes de ingreso pendientes.</div>'; return; }
+
   el.innerHTML = pendientes.map(a=>`
     <div class="panel" style="margin-bottom:12px; padding:16px 18px;">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; cursor:pointer;" onclick="toggleDetalleIngreso('${a.id}')">
@@ -1504,20 +1617,17 @@ function renderPendientesIngreso(){
         <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Placa solicitada</div><div class="mono">${a.placa||'Sin asignar'}</div></div>
         <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Discord ID</div><div class="mono">${a.discord||'—'}</div></div>
         <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Nota</div><div>${a.notas||'—'}</div></div>
-        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Edad OOC</div><div>${a.edadOOC||'—'}</div></div>
-        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Edad IC</div><div>${a.edadIC||'—'}</div></div>
-        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Tiempo que rolea</div><div>${a.tiempoRolea||'—'}</div></div>
-        <div style="grid-column: span 3;"><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Experiencia IC</div><div style="white-space:pre-wrap;">${a.experienciaIC||'—'}</div></div>
-        <div style="grid-column: span 3;"><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Experiencia en cuerpos policiales</div><div style="white-space:pre-wrap;">${a.experienciaPolicial||'—'}</div></div>
       </div>
     </div>`).join('');
 }
+
 function toggleDetalleIngreso(id){
   const el = document.getElementById('detalle-ingreso-'+id);
   if(!el) return;
   const visible = el.style.display === 'grid';
   el.style.display = visible ? 'none' : 'grid';
 }
+
 function siguientePlacaSugerida(){
   let maxNum = 0, maxLen = 4;
   agentes.forEach(a=>{
@@ -1529,9 +1639,11 @@ function siguientePlacaSugerida(){
   if(maxNum === 0) return '';
   return String(maxNum + 1).padStart(maxLen, '0');
 }
+
 async function aprobarIngreso(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
+
   let placaFinal = ag.placa || '';
   if(!placaFinal){
     const sugerida = siguientePlacaSugerida();
@@ -1539,23 +1651,26 @@ async function aprobarIngreso(id){
     if(respuesta === null) return; // canceló el prompt
     placaFinal = respuesta.trim();
   }
-  if(!confirm(`¿Aprobar el ingreso de ${ag.nombre}${placaFinal? ' con placa #'+placaFinal:''}? Quedará activo y se le asignará el rol de Discord de "Preseleccionado".`)) return;
+
+  if(!confirm(`¿Aprobar el ingreso de ${ag.nombre}${placaFinal? ' con placa #'+placaFinal:''}? Quedará activo y se le asignará el rol de Discord de "${ag.rango||'Cadete'}".`)) return;
   try{
     const datosActualizar = { estado: 'activo' };
     if(placaFinal) datosActualizar.placa = placaFinal;
     await db.collection('agentes').doc(id).update(datosActualizar);
     registrarAuditoria(`Aprobó el ingreso de ${ag.nombre}${placaFinal? ' (placa #'+placaFinal+')':''}`);
-    const resultado = await asignarRolPreseleccionado(ag.discord);
+    const resultado = await sincronizarRolDiscord(ag.discord, null, ag.rango || 'Cadete');
+    sincronizarApodoDiscord(ag.discord, ag.rango || 'Cadete', ag.nombre, placaFinal || ag.placa);
     if(resultado.omitido){
       showToast(`${ag.nombre} aprobado (Discord no se actualizó: ${resultado.razon})`);
     }else if(resultado.errores && resultado.errores.length){
       showToast(`${ag.nombre} aprobado, pero hubo un problema asignando el rol en Discord`);
       console.error(resultado.errores);
     }else{
-      showToast(`${ag.nombre} aprobado y se le asignó el rol de Preseleccionado`);
+      showToast(`${ag.nombre} aprobado y su rol de Discord fue asignado`);
     }
   }catch(e){ showToast('Error al aprobar el ingreso'); }
 }
+
 async function rechazarIngreso(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
@@ -1566,6 +1681,7 @@ async function rechazarIngreso(id){
     showToast('Solicitud rechazada');
   }catch(e){ showToast('Error al rechazar'); }
 }
+
 function editarAgente(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
@@ -1580,12 +1696,14 @@ function editarAgente(id){
   renderChipsRolesExtra();
   const divisionesGuardadas = ag.divisiones || [];
   document.querySelectorAll('.ag-division-check').forEach(c=>{ c.checked = divisionesGuardadas.includes(c.value); });
+
   document.getElementById('titulo-form-agente').textContent = `Editando a ${ag.nombre}`;
   document.getElementById('btn-guardar-agente').textContent = 'Guardar cambios';
   document.getElementById('btn-cancelar-edicion').style.display = 'inline-block';
   document.getElementById('panel-form-agente').scrollIntoView({ behavior:'smooth', block:'start' });
   showToast('Modifica lo que necesites y presiona "Guardar cambios"');
 }
+
 function cancelarEdicionAgente(){
   document.getElementById('ag-placa').value = '';
   document.getElementById('ag-nombre').value = '';
@@ -1601,6 +1719,7 @@ function cancelarEdicionAgente(){
   document.getElementById('btn-guardar-agente').textContent = 'Registrar';
   document.getElementById('btn-cancelar-edicion').style.display = 'none';
 }
+
 async function addBitacora(){
   const agenteId = document.getElementById('bi-agente').value;
   const tipo = document.getElementById('bi-tipo').value;
@@ -1615,6 +1734,7 @@ async function addBitacora(){
     showToast('Bitácora registrada');
   }catch(e){ showToast('Error al guardar la bitácora'); }
 }
+
 async function eliminarBitacora(id){
   const b = bitacoras.find(x=>x.id===id);
   if(!confirm(`¿Eliminar esta bitácora de ${b? nombreAgente(b.agenteId) : 'este agente'}? No se puede deshacer.`)) return;
@@ -1624,6 +1744,7 @@ async function eliminarBitacora(id){
   }
   catch(e){ showToast('Error al eliminar'); }
 }
+
 async function addBono(){
   const agenteId = document.getElementById('bo-agente').value;
   const periodicidad = document.getElementById('bo-periodicidad').value;
@@ -1640,6 +1761,7 @@ async function addBono(){
     showToast('Pago de bono registrado');
   }catch(e){ showToast('Error al guardar el bono'); }
 }
+
 async function eliminarBono(id){
   const b = bonos.find(x=>x.id===id);
   if(!confirm(`¿Eliminar este pago de bono${b? ' de '+nombreAgente(b.agenteId) : ''}${b?.monto? ' ($'+b.monto+')':''}? No se puede deshacer.`)) return;
@@ -1649,6 +1771,7 @@ async function eliminarBono(id){
   }
   catch(e){ showToast('Error al eliminar'); }
 }
+
 async function guardarCanalSanciones(){
   const canalStrikes = document.getElementById('canal-strikes-id').value.trim();
   const canalWarnings = document.getElementById('canal-warnings-id').value.trim();
@@ -1658,6 +1781,7 @@ async function guardarCanalSanciones(){
     showToast('Canales guardados');
   }catch(e){ showToast('Error al guardar los canales'); }
 }
+
 async function guardarRolesSancion(){
   const roles = {
     warn1: document.getElementById('rol-warn-1').value.trim(),
@@ -1674,6 +1798,7 @@ async function guardarRolesSancion(){
     showToast('Roles guardados');
   }catch(e){ showToast('Error al guardar los roles'); }
 }
+
 async function expulsarDeDiscord(discordUserId){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
   const rolExpulsion = rolesSancionPorTipo.expulsion;
@@ -1691,8 +1816,10 @@ async function expulsarDeDiscord(discordUserId){
     return { omitido:true, razon:'Error de conexión al expulsar en Discord.' };
   }
 }
+
 async function asignarRolSancion(discordUserId, gravedad, nivelActual, nivelAnterior){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
+
   let rolNuevoId, rolAnteriorId = null;
   if(gravedad === 'baja'){
     rolNuevoId = rolesSancionPorTipo.expulsion;
@@ -1702,6 +1829,7 @@ async function asignarRolSancion(discordUserId, gravedad, nivelActual, nivelAnte
     if(nivelAnterior) rolAnteriorId = rolesSancionPorTipo[prefijo + nivelAnterior];
   }
   if(!rolNuevoId) return { omitido:true, razon:`No hay rol de Discord configurado para ese nivel de "${etiquetaGravedad(gravedad)}".` };
+
   try{
     const resp = await fetch('/api/discord-role-update', {
       method:'POST',
@@ -1715,6 +1843,7 @@ async function asignarRolSancion(discordUserId, gravedad, nivelActual, nivelAnte
     return { omitido:true, razon:'Error de conexión al asignar el rol.' };
   }
 }
+
 async function aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, solicitadoPor){
   const agente = agentes.find(a=>a.id===agenteId);
   const propias = sanciones.filter(s=>s.agenteId===agenteId);
@@ -1722,15 +1851,18 @@ async function aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, soli
   const strikes = Math.min(propias.filter(s=>s.gravedad==='grave' || s.gravedad==='baja').length + (gravedad!=='leve'?1:0), 3);
   const nivelActual = gravedad === 'leve' ? warns : strikes;
   const nivelAnterior = nivelActual > 1 ? nivelActual - 1 : null;
+
   await db.collection('sanciones').doc(uid()).set({ agenteId, gravedad, fecha, evidencia, motivo, solicitadoPor: solicitadoPor||null, creado: Date.now() });
   registrarAuditoria(`Aplicó una sanción (${gravedad}) a ${nombreAgente(agenteId)}${solicitadoPor? ' (solicitada por '+solicitadoPor+')':''}`);
   showToast('Sanción aplicada');
+
   if(gravedad === 'baja'){
     try{
       await db.collection('agentes').doc(agenteId).update({ estado: 'expulsado' });
       registrarAuditoria(`Marcó a ${nombreAgente(agenteId)} como Expulsado`);
     }catch(e){ /* no bloquea el resto del flujo */ }
   }
+
   let resultadoRol;
   if(gravedad === 'baja'){
     resultadoRol = await expulsarDeDiscord(agente?.discord);
@@ -1740,6 +1872,7 @@ async function aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, soli
   if(!resultadoRol.omitido && resultadoRol.errores && resultadoRol.errores.length){
     console.error('Error al asignar rol de sanción:', resultadoRol.errores);
   }
+
   const canalDestino = gravedad === 'leve' ? canalWarningsId : canalStrikesId;
   if(canalDestino){
     try{
@@ -1771,6 +1904,7 @@ async function aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, soli
     showToast('Sanción guardada (no hay canal de Discord configurado para este tipo de sanción)');
   }
 }
+
 async function addSancion(){
   const agenteId = document.getElementById('sa-agente').value;
   const gravedad = document.getElementById('sa-gravedad').value;
@@ -1779,6 +1913,7 @@ async function addSancion(){
   const motivo = document.getElementById('sa-motivo').value.trim();
   if(!agenteId){ showToast('Selecciona un agente'); return; }
   if(!motivo){ showToast('Describe el motivo'); return; }
+
   // Si NO es Directiva, la sanción queda pendiente de aprobación en vez de aplicarse directo
   if(!usuarioActual?.esDirectiva){
     if(!confirm(`¿Enviar esta sanción a Directiva para su aprobación?\n\n${nombreAgente(agenteId)} — ${etiquetaGravedad(gravedad)}`)) return;
@@ -1795,6 +1930,7 @@ async function addSancion(){
     }catch(e){ showToast('Error al enviar la solicitud de sanción'); }
     return;
   }
+
   // Directiva: se aplica directo
   try{
     await aplicarSancion(agenteId, gravedad, fecha, evidencia, motivo, null);
@@ -1802,6 +1938,7 @@ async function addSancion(){
     document.getElementById('sa-evidencia').value='';
   }catch(e){ showToast('Error al guardar la sanción'); }
 }
+
 async function aprobarSancionPendiente(id){
   const sol = sancionesPendientes.find(s=>s.id===id);
   if(!sol) return;
@@ -1812,6 +1949,7 @@ async function aprobarSancionPendiente(id){
     registrarAuditoria(`Aprobó la sanción de ${nombreAgente(sol.agenteId)} solicitada por ${sol.solicitadoPor}`);
   }catch(e){ showToast('Error al aprobar la sanción'); }
 }
+
 async function rechazarSancionPendiente(id){
   const sol = sancionesPendientes.find(s=>s.id===id);
   if(!sol) return;
@@ -1822,6 +1960,7 @@ async function rechazarSancionPendiente(id){
     showToast('Sanción rechazada');
   }catch(e){ showToast('Error al rechazar'); }
 }
+
 function renderSancionesPendientes(){
   const el = document.getElementById('tabla-sanciones-pendientes');
   if(!el) return;
@@ -1843,6 +1982,7 @@ function renderSancionesPendientes(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 async function eliminarSancion(id){
   const s = sanciones.find(x=>x.id===id);
   if(!confirm(`¿Eliminar esta sanción${s? ' de '+nombreAgente(s.agenteId) : ''}? No se puede deshacer.`)) return;
@@ -1873,9 +2013,11 @@ async function eliminarSancion(id){
         }
       }
     }
+
     await db.collection('sanciones').doc(id).delete();
     if(s) registrarAuditoria(`Eliminó una sanción de ${nombreAgente(s.agenteId)}`);
     showToast('Sanción eliminada');
+
     if(datosRol){
       fetch('/api/discord-role-update', {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -1885,6 +2027,7 @@ async function eliminarSancion(id){
   }
   catch(e){ showToast('Error al eliminar'); }
 }
+
 // ---------- RENDER ----------
 function nombreAgente(id){
   const a = agentes.find(a=>a.id===id);
@@ -1896,6 +2039,7 @@ function countBitacoras(agenteId){
 function countSancionesActivas(agenteId){
   return sanciones.filter(s=>s.agenteId===agenteId).length;
 }
+
 function renderSelects(){
   const seleccionables = agentes.filter(a=> a.estado!=='pendiente' && a.estado!=='expulsado');
   const ordenados = [...seleccionables].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
@@ -1907,6 +2051,7 @@ function renderSelects(){
   const selAusencia = document.getElementById('au-agente');
   if(selAusencia) selAusencia.innerHTML = seleccionables.length ? opts : '<option value="">No hay agentes aprobados todavía</option>';
 }
+
 function renderAgentesTabla(){
   const el = document.getElementById('tabla-agentes');
   const agentesConfirmados = agentes.filter(a=>a.estado!=='pendiente');
@@ -1940,44 +2085,50 @@ function renderAgentesTabla(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 function chipsRolesExtra(rolesExtra){
   if(!rolesExtra || !rolesExtra.length) return '';
   return `<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:3px;">${
     rolesExtra.map(r=>`<span style="font-size:9.5px; padding:1px 6px; border-radius:8px; background:var(--navy-800); border:1px solid var(--navy-700); color:var(--paper-dim); white-space:nowrap;">${r}</span>`).join('')
   }</div>`;
 }
+
 function chipsDivisiones(divisiones){
   if(!divisiones || !divisiones.length) return '';
   return `<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:3px;">${
-    divisiones.map(d=>`<span style="font-size:9.5px; padding:1px 6px; border-radius:8px; background:rgba(201,162,39,0.12); border:1px solid var(--brass-dim); color:var(--brass); white-space:nowrap; font-weight:600;">${DIVISIONES_EMOJI[d]||''} ${d}</span>`).join('')
+    divisiones.map(d=>`<span style="font-size:9.5px; padding:1px 6px; border-radius:8px; background:rgba(201,162,39,0.12); border:1px solid var(--brass-dim); color:var(--brass); white-space:nowrap; font-weight:600;">${d}</span>`).join('')
   }</div>`;
 }
+
 function etiquetaGravedad(g){
   if(g==='leve') return 'Warn';
   if(g==='grave') return 'Strike';
   if(g==='baja') return 'Expulsión';
   return g||'—';
 }
+
 function iconoRango(rango){
-  const mapa = {
-    'Ministro':'👑', 'Director':'⭐', 'Sub Director':'⭐', 'Jefe Adjunto':'⭐', 'Jefe Supervisor':'⭐',
-    'Teniente Coronel':'🔴', 'Capitán':'🔴', 'Teniente':'🔴',
-    'Sargento II':'🟠', 'Sargento I':'🟠',
-    'Oficial III':'🔵', 'Oficial II':'🔵', 'Oficial I':'🔵',
-    'Cadete':'🟢', 'Aspirante':'⚪'
-  };
-  return mapa[rango] || '•';
+  const r = (rango||'').toUpperCase();
+  if(r.includes('DIRECTOR') || r.includes('JEFE DEPARTAMENTO') || r.includes('JEFE DAI') || r.includes('SUB JEFE') || r.includes('DEV.') || r.includes('STAFF')) return '⭐';
+  if(r.includes('COMISARIO') || r.includes('COMISIONADO')) return '🎖️';
+  if(r.includes('INSPECTOR')) return '🛡️';
+  if(r.includes('OFICIAL') || r.includes('AGENTE')) return '🔹';
+  if(r.includes('CADETE')) return '🔰';
+  if(r.includes('JUBILADO')) return '⚪';
+  return '•';
 }
+
 async function editarNota(id){
   const ag = agentes.find(a=>a.id===id);
   if(!ag) return;
-  const nueva = window.prompt(`Nota interna para ${ag.nombre} (solo la ve la OSI):`, ag.notas || '');
+  const nueva = window.prompt(`Nota interna para ${ag.nombre} (solo la ve el DAI):`, ag.notas || '');
   if(nueva === null) return; // canceló
   try{
     await db.collection('agentes').doc(id).update({ notas: nueva.trim() });
     registrarAuditoria(`Actualizó la nota interna de ${ag.nombre}`);
   }catch(e){ showToast('Error al guardar la nota'); }
 }
+
 function renderHistorialCompleto(){
   const el = document.getElementById('tabla-historial-completo');
   if(!el) return;
@@ -1986,6 +2137,7 @@ function renderHistorialCompleto(){
     ${auditoria.map(a=>`<tr><td class="mono">${fmtHora(a.creado)}</td><td>${a.usuario||'—'}</td><td>${a.accion||'—'}</td></tr>`).join('')}
   </tbody></table>`;
 }
+
 async function addAusencia(){
   const agenteId = document.getElementById('au-agente').value;
   const desde = document.getElementById('au-desde').value;
@@ -2005,6 +2157,7 @@ async function addAusencia(){
     showToast('Ausencia registrada');
   }catch(e){ showToast('Error al registrar la ausencia'); }
 }
+
 async function eliminarAusencia(id){
   const a = ausencias.find(x=>x.id===id);
   if(!confirm(`¿Eliminar esta ausencia${a? ' de '+nombreAgente(a.agenteId) : ''}?`)) return;
@@ -2014,18 +2167,23 @@ async function eliminarAusencia(id){
     showToast('Ausencia eliminada');
   }catch(e){ showToast('Error al eliminar'); }
 }
+
 let agenteAusenciaSeleccionado = null;
+
 function verHistorialAusencias(agenteId){
   agenteAusenciaSeleccionado = agenteId;
   renderAusenciasTabla();
 }
+
 function volverRosterAusencias(){
   agenteAusenciaSeleccionado = null;
   renderAusenciasTabla();
 }
+
 function renderAusenciasTabla(){
   const el = document.getElementById('tabla-ausencias');
   if(!el) return;
+
   // ---- Vista de detalle: historial de un agente específico ----
   if(agenteAusenciaSeleccionado){
     const agente = agentes.find(a=>a.id===agenteAusenciaSeleccionado);
@@ -2061,6 +2219,7 @@ function renderAusenciasTabla(){
     `;
     return;
   }
+
   // ---- Vista de roster: todos los agentes con su conteo de ausencias ----
   if(!agentes.length){ el.innerHTML = '<div class="empty">Registra agentes para ver esta sección.</div>'; return; }
   const ordenados = [...agentes].sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}));
@@ -2081,11 +2240,14 @@ function renderAusenciasTabla(){
   }).join('')}
   </tbody></table>`;
 }
+
 let denunciasChecklists = {}; // { agenteId: { denuncias:[20], evidencias:[20] } }
 let checklistAgenteActual = null;
 let checklistDenuncias = Array.from({length:20}, entradaVacia);
 let checklistEvidencias = Array.from({length:20}, entradaVacia);
+
 function entradaVacia(){ return { numero: '', estado: null }; }
+
 function normalizarEntrada(e){
   // Compatibilidad con el formato viejo (true/false/null sueltos)
   if(e && typeof e === 'object') return { numero: e.numero || '', estado: e.estado===true ? true : e.estado===false ? false : null };
@@ -2093,11 +2255,13 @@ function normalizarEntrada(e){
   if(e === false) return { numero: '', estado: false };
   return entradaVacia();
 }
+
 function normalizarLista(lista){
   const limpia = (lista || []).map(normalizarEntrada).slice(0, 20);
   while(limpia.length < 20) limpia.push(entradaVacia());
   return limpia;
 }
+
 function extraerListasChecklist(datos){
   if(!datos) return { denuncias: normalizarLista([]), evidencias: normalizarLista([]) };
   // Formato nuevo: ya viene separado en denuncias/evidencias
@@ -2110,6 +2274,7 @@ function extraerListasChecklist(datos){
   }
   return { denuncias: normalizarLista([]), evidencias: normalizarLista([]) };
 }
+
 function cargarChecklistDenuncias(){
   const agenteId = document.getElementById('de-agente-select').value;
   const panel = document.getElementById('panel-checklist-denuncias');
@@ -2124,7 +2289,9 @@ function cargarChecklistDenuncias(){
   renderGridChecks('denuncias');
   renderGridChecks('evidencias');
 }
+
 function listaPorTipo(tipo){ return tipo === 'denuncias' ? checklistDenuncias : checklistEvidencias; }
+
 function renderGridChecks(tipo){
   const lista = listaPorTipo(tipo);
   const el = document.getElementById('grid-checks-'+tipo);
@@ -2148,11 +2315,13 @@ function renderGridChecks(tipo){
   const conteo = document.getElementById('conteo-'+tipo);
   if(conteo) conteo.textContent = total;
 }
+
 async function actualizarNumeroDenuncia(tipo, index, valor){
   if(!checklistAgenteActual) return;
   listaPorTipo(tipo)[index].numero = valor.trim();
   await guardarChecklistDenuncias();
 }
+
 async function ciclarCheckDenuncia(tipo, index){
   if(!checklistAgenteActual) return;
   // Vacío -> Válida (✓) -> Rechazada (✗) -> Vacío otra vez
@@ -2162,6 +2331,7 @@ async function ciclarCheckDenuncia(tipo, index){
   renderGridChecks(tipo);
   await guardarChecklistDenuncias();
 }
+
 async function reiniciarChecklist(tipo){
   if(!checklistAgenteActual) return;
   const agente = agentes.find(a=>a.id===checklistAgenteActual);
@@ -2173,6 +2343,7 @@ async function reiniciarChecklist(tipo){
   await guardarChecklistDenuncias();
   showToast('Casillas reiniciadas');
 }
+
 async function guardarChecklistDenuncias(){
   try{
     await db.collection('denunciasChecklist').doc(checklistAgenteActual).set({
@@ -2187,10 +2358,12 @@ async function guardarChecklistDenuncias(){
     registrarAuditoria(`Actualizó el checklist de ${agente? agente.nombre : checklistAgenteActual} (${validasD} denuncias válidas, ${validasE} evidencias válidas)`);
   }catch(e){ showToast('Error al guardar el checklist'); }
 }
+
 function denunciasValidadas(agente){
   const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[agente.id]);
   return denuncias.filter(e=>e.estado===true).length + evidencias.filter(e=>e.estado===true).length;
 }
+
 function renderDenunciasStats(){
   const statTotal = document.getElementById('stat-denuncias-total');
   const statAgentes = document.getElementById('stat-denuncias-agentes');
@@ -2207,11 +2380,13 @@ function renderDenunciasStats(){
   if(statTotal) statTotal.textContent = total;
   if(statAgentes) statAgentes.textContent = iniciados;
   if(statCompletos) statCompletos.textContent = completos;
+
   const selAgente = document.getElementById('de-agente-select');
   if(selAgente){
     const actual = selAgente.value;
     const termino = (document.getElementById('buscar-agente-denuncia')?.value || '').trim().toLowerCase();
     const soloIniciados = document.getElementById('solo-iniciados-denuncia')?.checked;
+
     let lista = agentes.filter(a=> a.estado!=='pendiente' && a.estado!=='expulsado');
     if(termino){
       lista = lista.filter(a =>
@@ -2225,12 +2400,14 @@ function renderDenunciasStats(){
         return denuncias.some(x=>x.estado!==null || (x.numero && x.numero.trim())) || evidencias.some(x=>x.estado!==null || (x.numero && x.numero.trim()));
       });
     }
+
     const opts = lista.sort((a,b)=> (a.placa||'').localeCompare(b.placa||'', undefined, {numeric:true}))
       .map(a=>{
         const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[a.id]);
         const n = denuncias.filter(e=>e.estado===true).length + evidencias.filter(e=>e.estado===true).length;
         return `<option value="${a.id}">${a.placa? '#'+a.placa+' — ':''}${a.nombre} (${n}/40)</option>`;
       }).join('');
+
     if(!agentes.length){
       selAgente.innerHTML = '<option value="">Registra un agente primero</option>';
     }else if(!lista.length){
@@ -2241,6 +2418,7 @@ function renderDenunciasStats(){
     }
   }
 }
+
 function renderHistorialRangos(){
   const el = document.getElementById('tabla-historial-rangos');
   if(!el) return;
@@ -2260,23 +2438,28 @@ function renderHistorialRangos(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 function claseTipoBitacora(tipo){
   if(tipo==='Entrenamiento') return 'entrenamiento';
   if(tipo==='Misión') return 'mision';
   if(tipo==='Operativo Especial') return 'operativo';
   return 'regular';
 }
+
 function renderBitacorasTabla(){
   const el = document.getElementById('tabla-bitacoras');
+
   const completados = bitacoras.filter(b=>b.estadoTurno==='completado');
   const enServicio = bitacoras.filter(b=>b.estadoTurno==='activo');
   const totalMin = completados.reduce((acc,b)=> acc + (b.duracionMin||0), 0);
+
   const statTurnos = document.getElementById('stat-turnos-completados');
   const statHoras = document.getElementById('stat-horas-totales');
   const statEnServicio = document.getElementById('stat-en-servicio');
   if(statTurnos) statTurnos.textContent = completados.length;
   if(statHoras) statHoras.textContent = (totalMin/60).toFixed(1)+'h';
   if(statEnServicio) statEnServicio.textContent = enServicio.length;
+
   const tablaServicio = document.getElementById('tabla-en-servicio');
   if(tablaServicio){
     tablaServicio.innerHTML = enServicio.length ? `<table><thead><tr>
@@ -2291,6 +2474,7 @@ function renderBitacorasTabla(){
       </tr>`).join('')}
     </tbody></table>` : '<div class="empty">Nadie está en servicio ahora mismo.</div>';
   }
+
   if(!bitacoras.length){ el.innerHTML = '<div class="empty">No hay bitácoras registradas todavía.</div>'; return; }
   el.innerHTML = `<table><thead><tr>
     <th>Fecha</th><th>Agente</th><th>Tipo</th><th>Entrada</th><th>Salida</th><th>Duración</th><th>Descripción</th><th></th>
@@ -2308,6 +2492,7 @@ function renderBitacorasTabla(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 async function publicarSolicitudDiscord(){
   const channelId = document.getElementById('discord-canal-solicitud-id').value.trim();
   if(!channelId){ showToast('Escribe el ID del canal'); return; }
@@ -2334,6 +2519,7 @@ async function publicarSolicitudDiscord(){
     }
   }catch(e){ showToast('Error de conexión al publicar en Discord'); }
 }
+
 async function publicarPanelDiscord(){
   const channelId = document.getElementById('discord-canal-id').value.trim();
   if(!channelId){ showToast('Escribe el ID del canal'); return; }
@@ -2353,6 +2539,7 @@ async function publicarPanelDiscord(){
     }
   }catch(e){ showToast('Error de conexión al publicar en Discord'); }
 }
+
 async function forzarCierreTurno(id){
   const b = bitacoras.find(x=>x.id===id);
   if(!b) return;
@@ -2367,6 +2554,7 @@ async function forzarCierreTurno(id){
     showToast('Turno cerrado');
   }catch(e){ showToast('Error al cerrar el turno'); }
 }
+
 function renderSancionesTabla(){
   const el = document.getElementById('tabla-sanciones');
   if(!sanciones.length){ el.innerHTML = '<div class="empty">No hay sanciones registradas todavía.</div>'; return; }
@@ -2384,10 +2572,12 @@ function renderSancionesTabla(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 function opcionesUnicas(campo){
   const set = new Set(agentes.map(a=>a[campo]).filter(Boolean));
   return [...set].sort();
 }
+
 function renderFiltrosPanel(){
   const selSub = document.getElementById('filtro-subdivision');
   const selDep = document.getElementById('filtro-departamento');
@@ -2399,19 +2589,23 @@ function renderFiltrosPanel(){
   selSub.value = subActual;
   selDep.value = depActual;
 }
+
 function agentesFiltrados(){
   const sub = document.getElementById('filtro-subdivision')?.value || '';
   const dep = document.getElementById('filtro-departamento')?.value || '';
   return agentes.filter(a => a.estado!=='pendiente' && (!sub || a.subdivision===sub) && (!dep || a.departamento===dep));
 }
+
 function bitacorasFiltradas(){
   const ids = new Set(agentesFiltrados().map(a=>a.id));
   return bitacoras.filter(b=>ids.has(b.agenteId));
 }
+
 function sancionesFiltradas(){
   const ids = new Set(agentesFiltrados().map(a=>a.id));
   return sanciones.filter(s=>ids.has(s.agenteId));
 }
+
 function claveSemana(fechaStr){
   const d = new Date(fechaStr+'T00:00:00');
   const target = new Date(d.valueOf());
@@ -2422,6 +2616,7 @@ function claveSemana(fechaStr){
   const week = 1 + Math.round(diff/(7*24*3600*1000));
   return `${target.getFullYear()}-S${String(week).padStart(2,'0')}`;
 }
+
 function renderGraficaBitacoras(lista){
   const el = document.getElementById('panel-grafica');
   if(!el) return;
@@ -2451,6 +2646,7 @@ function renderGraficaBitacoras(lista){
   el.innerHTML = `<div style="display:flex; align-items:flex-end; gap:8px; height:150px; padding:16px; background:var(--navy-900); border:1px solid var(--navy-700); border-radius:6px;">${barras}</div>
   <div style="font-size:10.5px; color:var(--steel-600); margin-top:6px; text-align:right;">Número de semana del año</div>`;
 }
+
 function tiempoRelativo(ts){
   if(!ts) return '—';
   const diffMs = Date.now() - ts;
@@ -2462,6 +2658,7 @@ function tiempoRelativo(ts){
   const dias = Math.floor(horas / 24);
   return `Hace ${dias}d`;
 }
+
 async function publicarAnuncio(){
   const texto = document.getElementById('anuncio-texto').value.trim();
   if(!texto){ showToast('Escribe el anuncio'); return; }
@@ -2469,11 +2666,12 @@ async function publicarAnuncio(){
     await db.collection('anuncios').doc(uid()).set({
       texto, autor: usuarioActual?.global_name || 'Desconocido', creado: Date.now()
     });
-    registrarAuditoria('Publicó un anuncio para toda la OSI');
+    registrarAuditoria('Publicó un anuncio para el DAI');
     document.getElementById('anuncio-texto').value = '';
     showToast('Anuncio publicado');
   }catch(e){ showToast('Error al publicar el anuncio'); }
 }
+
 async function eliminarAnuncio(id){
   if(!confirm('¿Eliminar este anuncio?')) return;
   try{
@@ -2481,6 +2679,7 @@ async function eliminarAnuncio(id){
     registrarAuditoria('Eliminó un anuncio');
   }catch(e){ showToast('Error al eliminar'); }
 }
+
 function renderAnuncios(){
   const el = document.getElementById('lista-anuncios');
   if(!el) return;
@@ -2494,6 +2693,7 @@ function renderAnuncios(){
       <button class="icon-btn" onclick="eliminarAnuncio('${a.id}')">Eliminar</button>
     </div>`).join('') : '<div class="empty">No hay anuncios publicados todavía.</div>';
 }
+
 function toggleAnuncios(){
   const bloque = document.getElementById('bloque-anuncios');
   const flecha = document.getElementById('flecha-anuncios');
@@ -2501,18 +2701,22 @@ function toggleAnuncios(){
   bloque.style.display = visible ? 'none' : 'block';
   flecha.textContent = visible ? '▸' : '▾';
 }
+
 function renderDashboardTarjetas(){
   const enServicio = bitacoras.filter(b=>b.estadoTurno==='activo').length;
   const activos = agentes.filter(a=>a.estado==='activo').length;
   const pendientesIngreso = agentes.filter(a=>a.estado==='pendiente').length;
+
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const haceSieteDias = new Date(hoy); haceSieteDias.setDate(haceSieteDias.getDate()-7);
   const haceSieteDiasStr = haceSieteDias.toISOString().slice(0,10);
+
   const bitacorasSemana = bitacoras.filter(b=>b.fecha && b.fecha >= haceSieteDiasStr).length;
   const ausentesSemana = ausencias.filter(a=>{
     if(!a.desde) return false;
     return a.desde >= haceSieteDiasStr || (a.hasta && a.hasta >= haceSieteDiasStr && a.desde <= new Date().toISOString().slice(0,10));
   }).length;
+
   const elEnServicio = document.getElementById('stat-en-servicio-panel');
   const elActivos = document.getElementById('stat-oficiales-activos');
   const elBitSemana = document.getElementById('stat-bitacoras-semana');
@@ -2526,6 +2730,7 @@ function renderDashboardTarjetas(){
   if(elSanciones) elSanciones.textContent = sanciones.length;
   if(elIngresos) elIngresos.textContent = pendientesIngreso;
 }
+
 function renderActividadTurnosPanel(){
   const el = document.getElementById('actividad-turnos-panel');
   if(!el) return;
@@ -2542,6 +2747,7 @@ function renderActividadTurnosPanel(){
       <span class="mono" style="color:var(--paper-dim); font-size:11px;">${tiempoRelativo(e.ts)}</span>
     </div>`).join('') : '<div class="empty">Sin actividad reciente.</div>';
 }
+
 function renderAlertasAscensoPanel(){
   const el = document.getElementById('alertas-ascenso-panel');
   if(!el) return;
@@ -2561,6 +2767,7 @@ function renderAlertasAscensoPanel(){
       ${iconoRango(a.rango)} ${a.nombre}
     </div>`).join('') : '<div class="empty" style="padding:16px 0;">No hay oficiales elegibles para ascenso hoy.</div>';
 }
+
 function renderPanel(){
   renderDashboardTarjetas();
   renderActividadTurnosPanel();
@@ -2569,30 +2776,38 @@ function renderPanel(){
   const agFilt = agentesFiltrados();
   const biFilt = bitacorasFiltradas();
   const saFilt = sancionesFiltradas();
+
   document.getElementById('stat-agentes').textContent = agFilt.length;
   document.getElementById('stat-bitacoras').textContent = biFilt.length;
   document.getElementById('stat-promedio').textContent = agFilt.length ? (biFilt.length/agFilt.length).toFixed(1) : '0';
+
   renderGraficaBitacoras(biFilt);
   renderInactivos(agFilt, biFilt);
+
   const ultimasB = biFilt.slice(0,5);
   document.getElementById('panel-ultimas-bitacoras').innerHTML = ultimasB.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Descripción</th></tr></thead><tbody>
     ${ultimasB.map(b=>`<tr><td class="mono">${fmtDate(b.fecha)}</td><td>${nombreAgente(b.agenteId)}</td><td>${b.desc||'—'}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin bitácoras aún.</div>';
+
   const ultimasS = saFilt.slice(0,5);
   document.getElementById('panel-ultimas-sanciones').innerHTML = ultimasS.length ?
     `<table><thead><tr><th>Fecha</th><th>Agente</th><th>Gravedad</th><th>Motivo</th></tr></thead><tbody>
     ${ultimasS.map(s=>`<tr><td class="mono">${fmtDate(s.fecha)}</td><td>${nombreAgente(s.agenteId)}</td><td><span class="pill ${s.gravedad}">${etiquetaGravedad(s.gravedad)}</span></td><td>${s.motivo}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">Sin sanciones aún.</div>';
 }
+
 function renderInactivos(agFilt, biFilt){
   const el = document.getElementById('panel-inactivos');
   if(!el) return;
   if(!agFilt.length){ el.innerHTML = '<div class="empty">Ningún agente coincide con este filtro.</div>'; return; }
+
   const umbral = parseInt(document.getElementById('umbral-inactivos')?.value, 10) || 7;
   const hoy = new Date();
   hoy.setHours(0,0,0,0);
+
   const activos = agFilt.filter(a => a.estado === 'activo');
+
   const conDatos = activos.map(a=>{
     const propias = biFilt.filter(b=>b.agenteId===a.id && b.fecha)
       .sort((x,y)=> y.fecha.localeCompare(x.fecha));
@@ -2605,13 +2820,16 @@ function renderInactivos(agFilt, biFilt){
     }
     return { agente:a, ultima, dias };
   });
+
   const inactivos = conDatos
     .filter(x => x.dias === null || x.dias >= umbral)
     .sort((x,y)=> (y.dias ?? 999999) - (x.dias ?? 999999));
+
   if(!inactivos.length){
     el.innerHTML = '<div class="empty">Ningún agente activo supera ese umbral. Todo al día.</div>';
     return;
   }
+
   el.innerHTML = `<table><thead><tr>
     <th>Placa</th><th>Agente</th><th>Rango</th><th>Última bitácora</th><th>Días inactivo</th>
   </tr></thead><tbody>
@@ -2625,12 +2843,15 @@ function renderInactivos(agFilt, biFilt){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 function renderBonosTabla(){
   const el = document.getElementById('tabla-bonos');
   document.getElementById('stat-bonos-cantidad').textContent = bonos.length;
   const total = bonos.reduce((acc,b)=> acc + (Number(b.monto)||0), 0);
   document.getElementById('stat-bonos-total').textContent = '$' + total.toLocaleString('es-ES', { maximumFractionDigits:2 });
+
   if(!bonos.length){ el.innerHTML = '<div class="empty">No hay bonos registrados todavía.</div>'; return; }
+
   const filtro = (document.getElementById('buscar-bono')?.value || '').trim().toLowerCase();
   let lista = bonos;
   if(filtro){
@@ -2643,6 +2864,7 @@ function renderBonosTabla(){
     });
   }
   if(!lista.length){ el.innerHTML = '<div class="empty">Ningún pago coincide con la búsqueda.</div>'; return; }
+
   el.innerHTML = `<table><thead><tr>
     <th>Fecha de pago</th><th>Agente</th><th>Periodicidad</th><th>Periodo</th><th>Monto</th><th>Registrado por</th><th></th>
   </tr></thead><tbody>
@@ -2658,6 +2880,7 @@ function renderBonosTabla(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 function renderAll(){
   renderSelects();
   renderAgentesTabla();
@@ -2670,6 +2893,7 @@ function renderAll(){
   renderAscensos();
   renderAusenciasTabla();
 }
+
 // ---------- NAV ----------
 document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -2679,6 +2903,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
   });
 });
+
 document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
 document.getElementById('bi-fecha').valueAsDate = new Date();
 document.getElementById('sa-fecha').valueAsDate = new Date();
@@ -2687,6 +2912,7 @@ document.getElementById('asc-fecha').valueAsDate = new Date();
 document.getElementById('au-desde').valueAsDate = new Date();
 document.getElementById('mi-au-desde').valueAsDate = new Date();
 actualizarTipoPeriodo();
+
 // ---------- VISTA POLICÍA (solo lectura) ----------
 async function initListenersPolicia(){
   try{
@@ -2702,10 +2928,12 @@ async function initListenersPolicia(){
     document.getElementById('panel-control-turno').style.display = 'block';
     document.getElementById('panel-registrar-ausencia').style.display = 'block';
     document.getElementById('panel-anuncios-policia').style.display = 'block';
+
     db.collection('anuncios').onSnapshot(s=>{
       const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
       renderPoliciaAnuncios(lista);
     });
+
     db.collection('bitacoras').where('agenteId','==', agente.id).onSnapshot(s=>{
       const lista = s.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
       turnoActivo = lista.find(b=>b.estadoTurno==='activo') || null;
@@ -2728,6 +2956,7 @@ async function initListenersPolicia(){
     showToast('Error al cargar tu expediente');
   }
 }
+
 async function registrarMiAusencia(){
   if(!miAgenteId) return;
   const desde = document.getElementById('mi-au-desde').value;
@@ -2745,6 +2974,7 @@ async function registrarMiAusencia(){
     showToast('Ausencia registrada');
   }catch(e){ showToast('Error al registrar la ausencia'); }
 }
+
 function renderPoliciaAnuncios(lista){
   const el = document.getElementById('policia-anuncios');
   if(!el) return;
@@ -2755,6 +2985,7 @@ function renderPoliciaAnuncios(lista){
       <div style="font-size:10.5px; color:var(--paper-dim); margin-top:4px;">${a.autor||'—'} · ${tiempoRelativo(a.creado)}</div>
     </div>`).join('') : '<div class="empty">No hay anuncios por ahora.</div>';
 }
+
 function renderPoliciaAusencias(lista){
   const el = document.getElementById('policia-ausencias');
   if(!el) return;
@@ -2769,6 +3000,7 @@ function renderPoliciaAusencias(lista){
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes ausencias registradas.</div>';
 }
+
 function renderControlTurno(){
   const el = document.getElementById('turno-estado');
   if(!el) return;
@@ -2784,6 +3016,7 @@ function renderControlTurno(){
     el.innerHTML = `<button class="btn" onclick="iniciarTurno()">Iniciar turno</button>`;
   }
 }
+
 async function iniciarTurno(){
   if(!miAgenteId) return;
   try{
@@ -2796,6 +3029,7 @@ async function iniciarTurno(){
     showToast('Turno iniciado');
   }catch(e){ showToast('Error al iniciar el turno'); }
 }
+
 async function finalizarTurno(){
   if(!turnoActivo) return;
   try{
@@ -2807,6 +3041,7 @@ async function finalizarTurno(){
     showToast(`Turno finalizado (${duracionMin} min)`);
   }catch(e){ showToast('Error al finalizar el turno'); }
 }
+
 function renderPoliciaInfo(agente){
   document.getElementById('policia-info').innerHTML = `
     <div class="grid-cards" style="grid-template-columns: repeat(4,1fr); margin-bottom:16px;">
@@ -2821,10 +3056,12 @@ function renderPoliciaInfo(agente){
       <div style="display:flex; flex-wrap:wrap; gap:6px;">${agente.rolesExtra.map(r=>`<span class="pill regular">${r}</span>`).join('')}</div>
     </div>` : ''}`;
 }
+
 function fmtHoraSimple(ts){
   if(!ts) return '—';
   return new Date(ts).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
 }
+
 function renderPoliciaBitacoras(lista){
   const el = document.getElementById('policia-bitacoras');
   el.innerHTML = lista.length ? `<table><thead><tr>
@@ -2841,6 +3078,7 @@ function renderPoliciaBitacoras(lista){
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes bitácoras registradas.</div>';
 }
+
 function renderPoliciaSanciones(lista){
   const el = document.getElementById('policia-sanciones');
   el.innerHTML = lista.length ? `<table><thead><tr>
@@ -2855,6 +3093,7 @@ function renderPoliciaSanciones(lista){
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes sanciones registradas.</div>';
 }
+
 function renderPoliciaBonos(lista){
   const el = document.getElementById('policia-bonos');
   el.innerHTML = lista.length ? `<table><thead><tr>
@@ -2870,16 +3109,19 @@ function renderPoliciaBonos(lista){
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No tienes bonos registrados.</div>';
 }
+
 // ---------- ASCENSOS ----------
 function fechaHoyISO(){
   return new Date().toISOString().slice(0,10);
 }
+
 function fechaBaseAgente(agente){
   // Si nunca tuvo un ascenso registrado, usamos la fecha en que se registró como punto de partida
   if(agente.fechaUltimoAscenso) return agente.fechaUltimoAscenso;
   if(agente.creado) return new Date(agente.creado).toISOString().slice(0,10);
   return null;
 }
+
 function diasEnRango(agente){
   const base = fechaBaseAgente(agente);
   if(!base) return null;
@@ -2888,11 +3130,13 @@ function diasEnRango(agente){
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   return Math.floor((hoy - fechaBase) / 86400000);
 }
+
 function bitacorasDesdeAscenso(agente){
   const base = fechaBaseAgente(agente);
   if(!base) return 0;
   return bitacoras.filter(b=>b.agenteId===agente.id && b.fecha && b.fecha >= base).length;
 }
+
 function renderRequisitosForm(){
   const el = document.getElementById('form-requisitos');
   if(!el) return;
@@ -2919,6 +3163,7 @@ function renderRequisitosForm(){
     </div>`;
   }).join('');
 }
+
 async function guardarRequisitos(){
   if(!usuarioActual || !usuarioActual.esDirectiva){
     showToast('Solo Directiva puede modificar los requisitos de ascenso');
@@ -2937,15 +3182,29 @@ async function guardarRequisitos(){
     showToast('Requisitos guardados');
   }catch(e){ showToast('Error al guardar los requisitos'); }
 }
+
+const CANAL_ASCENSOS_ID = '1521954296491409419';
+
+const ROLES_DIVISION_DISCORD = {
+  'DIRECTIVA': '1521954294017036341',
+  'DAI': '1521954294017036340',
+  'CICPC': '1521954294017036339',
+};
+
+const ROLES_DISCORD_POR_DEFECTO = {
+  'Primer Comisario DAI': '1538675774243078257',
+};
+
 function renderRolesDiscordForm(){
   const el = document.getElementById('form-roles-discord');
   if(!el) return;
   el.innerHTML = RANGOS_ORDEN.map(r=>`
     <div class="field">
       <label>${iconoRango(r)} ${r}</label>
-      <input type="text" class="rol-discord-input" data-rango="${r}" placeholder="ID del rol en Discord" value="${rolesDiscordPorRango[r] || ''}">
+      <input type="text" class="rol-discord-input" data-rango="${r}" placeholder="ID del rol en Discord" value="${rolesDiscordPorRango[r] || ROLES_DISCORD_POR_DEFECTO[r] || ''}">
     </div>`).join('');
 }
+
 async function guardarRolesDiscord(){
   if(!usuarioActual || !usuarioActual.esDirectiva){
     showToast('Solo Directiva puede modificar los roles de Discord por rango');
@@ -2964,57 +3223,7 @@ async function guardarRolesDiscord(){
     showToast('Roles de Discord guardados');
   }catch(e){ showToast('Error al guardar los roles de Discord'); }
 }
-function renderRolesDivisionForm(){
-  const el = document.getElementById('form-roles-division');
-  if(!el) return;
-  el.innerHTML = DIVISIONES_ORDEN.map(d=>`
-    <div class="field">
-      <label>${DIVISIONES_EMOJI[d]||''} ${d}</label>
-      <input type="text" class="rol-division-input" data-division="${d}" placeholder="ID del rol en Discord" value="${rolesDivisionPorDivision[d] || ''}">
-    </div>`).join('');
-}
-async function guardarRolesDivision(){
-  if(!usuarioActual || !usuarioActual.esDirectiva){
-    showToast('Solo Directiva puede modificar los roles de Discord por división');
-    return;
-  }
-  const inputs = document.querySelectorAll('.rol-division-input');
-  const roles = {};
-  inputs.forEach(inp=>{
-    const v = inp.value.trim();
-    if(v) roles[inp.dataset.division] = v;
-  });
-  const canalAscensos = document.getElementById('canal-ascensos-id').value.trim();
-  try{
-    await db.collection('config').doc('rolesDivision').set({ roles, canalAscensos });
-    registrarAuditoria('Actualizó el mapeo de roles de Discord por división y el canal de ascensos');
-    showToast('Roles de división guardados');
-  }catch(e){ showToast('Error al guardar los roles de división'); }
-}
-async function guardarRolPreseleccionado(){
-  const rolPreseleccionado = document.getElementById('rol-preseleccionado').value.trim();
-  try{
-    await db.collection('config').doc('rolesIngreso').set({ rolPreseleccionado });
-    registrarAuditoria('Actualizó el rol de "Preseleccionado" para ingresos');
-    showToast('Rol guardado');
-  }catch(e){ showToast('Error al guardar el rol'); }
-}
-async function asignarRolPreseleccionado(discordUserId){
-  if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
-  if(!rolPreseleccionadoId) return { omitido:true, razon:'No hay un rol de "Preseleccionado" configurado en Nuevos Ingresos.' };
-  try{
-    const resp = await fetch('/api/discord-role-update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordUserId, agregarRoles: [rolPreseleccionadoId] })
-    });
-    const texto = await resp.text();
-    try{ return JSON.parse(texto); }
-    catch(e){ return { omitido:true, razon:`Respuesta inesperada (código ${resp.status}).` }; }
-  }catch(e){
-    return { omitido:true, razon:'Error de conexión al asignar el rol de Preseleccionado: ' + String(e) };
-  }
-}
+
 async function sincronizarRolDiscord(discordUserId, rangoAnterior, rangoNuevo){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
   const rolNuevoId = rolesDiscordPorRango[rangoNuevo];
@@ -3036,12 +3245,13 @@ async function sincronizarRolDiscord(discordUserId, rangoAnterior, rangoNuevo){
     return { omitido:true, razon:'Error de conexión al sincronizar con Discord: ' + String(e) };
   }
 }
+
 async function sincronizarDivisionesDiscord(discordUserId, divisionesAnteriores, divisionesNuevas){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
   const anteriores = divisionesAnteriores || [];
   const nuevas = divisionesNuevas || [];
-  const agregarRoles = nuevas.filter(d=>!anteriores.includes(d)).map(d=>rolesDivisionPorDivision[d]).filter(Boolean);
-  const quitarRoles = anteriores.filter(d=>!nuevas.includes(d)).map(d=>rolesDivisionPorDivision[d]).filter(Boolean);
+  const agregarRoles = nuevas.filter(d=>!anteriores.includes(d)).map(d=>ROLES_DIVISION_DISCORD[d]).filter(Boolean);
+  const quitarRoles = anteriores.filter(d=>!nuevas.includes(d)).map(d=>ROLES_DIVISION_DISCORD[d]).filter(Boolean);
   if(!agregarRoles.length && !quitarRoles.length) return { omitido:true, razon:'Sin cambios en las divisiones.' };
   try{
     const resp = await fetch('/api/discord-role-update', {
@@ -3056,6 +3266,7 @@ async function sincronizarDivisionesDiscord(discordUserId, divisionesAnteriores,
     return { omitido:true, razon:'Error de conexión al sincronizar las divisiones con Discord.' };
   }
 }
+
 async function sincronizarApodoDiscord(discordUserId, rango, nombre, placa){
   if(!discordUserId) return { omitido:true, razon:'El agente no tiene ID de Discord registrado.' };
   const nick = `${rango||''} | ${nombre||''}${placa? ' #'+placa : ''}`.trim();
@@ -3073,15 +3284,18 @@ async function sincronizarApodoDiscord(discordUserId, rango, nombre, placa){
     return { omitido:true, razon:'Error de conexión al cambiar el apodo: ' + String(e) };
   }
 }
+
 function contarValidasPorTipo(agente, tipo){
   const { denuncias, evidencias } = extraerListasChecklist(denunciasChecklists[agente.id]);
   const lista = tipo === 'denuncias' ? denuncias : evidencias;
   return lista.filter(e=>e.estado===true).length;
 }
+
 function renderAscensos(){
   const elElegibles = document.getElementById('tabla-elegibles');
   const elProgreso = document.getElementById('tabla-en-progreso');
   if(!elElegibles || !elProgreso) return;
+
   const activos = agentes.filter(a=>a.estado==='activo');
   const conDatos = activos.map(a=>{
     const req = requisitosAscenso[a.rango] || { dias:0, denuncias:0, evidencias:0 };
@@ -3089,20 +3303,25 @@ function renderAscensos(){
     const bitacorasMarcadas = bitacorasDesdeAscenso(a);
     const denunciasVal = contarValidasPorTipo(a, 'denuncias');
     const evidenciasVal = contarValidasPorTipo(a, 'evidencias');
+
     const diasOk = req.dias <= 0 || (dias !== null && dias >= req.dias);
     const denunciasOk = req.denuncias <= 0 || denunciasVal >= req.denuncias;
     const evidenciasOk = req.evidencias <= 0 || evidenciasVal >= req.evidencias;
     const cumpleTodo = diasOk && denunciasOk && evidenciasOk;
+
     // Progreso combinado, para ordenar/mostrar barra cuando aún no cumple
     const partes = [];
     if(req.dias > 0) partes.push(Math.min(1, (dias||0) / req.dias));
     if(req.denuncias > 0) partes.push(Math.min(1, denunciasVal / req.denuncias));
     if(req.evidencias > 0) partes.push(Math.min(1, evidenciasVal / req.evidencias));
     const progreso = partes.length ? Math.round((partes.reduce((a,b)=>a+b,0) / partes.length) * 100) : 0;
+
     return { agente:a, req, dias, bitacorasMarcadas, denunciasVal, evidenciasVal, diasOk, denunciasOk, evidenciasOk, cumpleTodo, progreso };
   }).filter(x => (x.req.dias > 0 || x.req.denuncias > 0 || x.req.evidencias > 0) && x.dias !== null);
+
   const elegibles = conDatos.filter(x=> x.cumpleTodo).sort((a,b)=> b.progreso - a.progreso);
   const enProgreso = conDatos.filter(x=> !x.cumpleTodo).sort((a,b)=> b.progreso - a.progreso);
+
   const miniBarra = (valor, requerido, ok) => requerido > 0 ? `
     <div style="flex:1; min-width:70px;">
       <div style="display:flex; justify-content:space-between; font-size:9.5px; color:${ok?'#8fbf92':'var(--paper-dim)'}; margin-bottom:2px;">
@@ -3112,6 +3331,7 @@ function renderAscensos(){
         <div style="width:${Math.min(100, Math.round((valor/requerido)*100))}%; height:100%; background:${ok?'var(--green)':'var(--brass-dim)'};"></div>
       </div>
     </div>` : '';
+
   elElegibles.innerHTML = elegibles.length ? `
     <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:14px;">
     ${elegibles.map(x=>{
@@ -3137,6 +3357,7 @@ function renderAscensos(){
       </div>`;
     }).join('')}
     </div>` : '<div class="empty">Nadie cumple todos los requisitos todavía.</div>';
+
   elProgreso.innerHTML = enProgreso.length ? `<table><thead><tr>
     <th>Placa</th><th>Oficial</th><th>Rango actual</th><th>Progreso por requisito</th><th>Bitácoras</th><th></th>
   </tr></thead><tbody>
@@ -3157,12 +3378,14 @@ function renderAscensos(){
     </tr>`).join('')}
   </tbody></table>` : '<div class="empty">No hay agentes con requisito configurado en progreso.</div>';
 }
+
 function siguienteRango(rangoActual){
   const idx = RANGOS_ORDEN.indexOf(rangoActual);
   // RANGOS_ORDEN va de mayor a menor jerarquía, así que "subir" es ir hacia atrás en la lista
   if(idx <= 0) return null;
   return RANGOS_ORDEN[idx - 1];
 }
+
 function prellenarAscenso(agenteId){
   document.getElementById('asc-agente').value = agenteId;
   const agente = agentes.find(a=>a.id===agenteId);
@@ -3171,14 +3394,17 @@ function prellenarAscenso(agenteId){
   if(sugerido && selRango) selRango.value = sugerido;
   document.getElementById('view-ascensos').scrollIntoView({ behavior:'smooth', block:'start' });
 }
+
 async function aplicarAscenso(agenteId, rangoNuevo, fecha, nota, solicitadoPor){
   const agente = agentes.find(a=>a.id===agenteId);
   if(!agente) return;
   const rangoAnterior = agente.rango || '(sin rango)';
+
   await db.collection('agentes').doc(agenteId).update({
     rango: rangoNuevo,
     fechaUltimoAscenso: fecha
   });
+
   await db.collection('historialRangos').doc(uid()).set({
     agenteId, agenteNombre: agente.nombre,
     rangoAnterior, rangoNuevo, nota,
@@ -3186,7 +3412,9 @@ async function aplicarAscenso(agenteId, rangoNuevo, fecha, nota, solicitadoPor){
     solicitadoPor: solicitadoPor || null,
     creado: Date.now()
   });
+
   registrarAuditoria(`Ascendió a ${agente.nombre}: ${rangoAnterior} → ${rangoNuevo}${solicitadoPor? ' (solicitado por '+solicitadoPor+')' : ''}`);
+
   const resultadoDiscord = await sincronizarRolDiscord(agente.discord, rangoAnterior, rangoNuevo);
   sincronizarApodoDiscord(agente.discord, rangoNuevo, agente.nombre, agente.placa);
   if(resultadoDiscord.omitido){
@@ -3197,33 +3425,36 @@ async function aplicarAscenso(agenteId, rangoNuevo, fecha, nota, solicitadoPor){
   }else{
     showToast(`${agente.nombre} ascendido a ${rangoNuevo} y su rol de Discord fue actualizado`);
   }
+
   // Publicar el aviso de ascenso en el canal correspondiente
-  if(canalAscensosId){
-    try{
-      await fetch('/api/discord-post-ascenso', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channelId: canalAscensosId,
-          discordUserId: agente.discord || '',
-          agenteNombre: agente.nombre,
-          agentePlaca: agente.placa || '',
-          rangoAnterior, rangoNuevo,
-          aprobadoPorNombre: usuarioActual?.global_name || null,
-        })
-      });
-    }catch(e){ /* no bloquea el flujo si falla el aviso */ }
-  }
+  try{
+    await fetch('/api/discord-post-ascenso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channelId: CANAL_ASCENSOS_ID,
+        discordUserId: agente.discord || '',
+        agenteNombre: agente.nombre,
+        agentePlaca: agente.placa || '',
+        rangoAnterior, rangoNuevo,
+        aprobadoPorNombre: usuarioActual?.global_name || null,
+      })
+    });
+  }catch(e){ /* no bloquea el flujo si falla el aviso */ }
 }
+
 async function ejecutarAscensoManual(){
   const agenteId = document.getElementById('asc-agente').value;
   const rangoNuevo = document.getElementById('asc-rango-destino').value;
   const fecha = document.getElementById('asc-fecha').value || fechaHoyISO();
   const nota = document.getElementById('asc-nota').value.trim();
   if(!agenteId){ showToast('Selecciona un agente'); return; }
+
   const agente = agentes.find(a=>a.id===agenteId);
   if(!agente){ showToast('No se encontró el agente'); return; }
+
   const rangoAnterior = agente.rango || '(sin rango)';
+
   // Si NO es Directiva, el ascenso queda pendiente de aprobación en vez de aplicarse directo
   if(!usuarioActual?.esDirectiva){
     if(!confirm(`¿Enviar este ascenso a Directiva para su aprobación?\n\n${agente.nombre}: ${rangoAnterior} → ${rangoNuevo}`)) return;
@@ -3239,6 +3470,7 @@ async function ejecutarAscensoManual(){
     }catch(e){ showToast('Error al enviar la solicitud de ascenso'); }
     return;
   }
+
   // Directiva: se aplica directo
   if(!confirm(`¿Confirmas el cambio de rango de ${agente.nombre}?\n\n${rangoAnterior} → ${rangoNuevo}`)) return;
   try{
@@ -3246,6 +3478,7 @@ async function ejecutarAscensoManual(){
     document.getElementById('asc-nota').value = '';
   }catch(e){ showToast('Error al ejecutar el ascenso'); }
 }
+
 async function aprobarAscensoPendiente(id){
   const sol = ascensosPendientes.find(a=>a.id===id);
   if(!sol) return;
@@ -3256,6 +3489,7 @@ async function aprobarAscensoPendiente(id){
     registrarAuditoria(`Aprobó el ascenso de ${sol.agenteNombre} solicitado por ${sol.solicitadoPor}`);
   }catch(e){ showToast('Error al aprobar el ascenso'); }
 }
+
 async function rechazarAscensoPendiente(id){
   const sol = ascensosPendientes.find(a=>a.id===id);
   if(!sol) return;
@@ -3266,6 +3500,7 @@ async function rechazarAscensoPendiente(id){
     showToast('Ascenso rechazado');
   }catch(e){ showToast('Error al rechazar'); }
 }
+
 function renderAscensosPendientes(){
   const el = document.getElementById('tabla-ascensos-pendientes');
   if(!el) return;
@@ -3287,6 +3522,7 @@ function renderAscensosPendientes(){
     </tr>`).join('')}
   </tbody></table>`;
 }
+
 async function reiniciarRelojes(){
   if(!confirm('Esto va a reiniciar el contador de días de TODOS los agentes activos a 0. ¿Continuar?')) return;
   try{
@@ -3304,6 +3540,7 @@ async function reiniciarRelojes(){
     showToast('Relojes reiniciados');
   }catch(e){ showToast('Error al reiniciar los relojes'); }
 }
+
 // ---------- BUSCADOR GLOBAL ----------
 function irAVista(nombreVista){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -3312,28 +3549,34 @@ function irAVista(nombreVista){
   if(btn) btn.classList.add('active');
   document.getElementById('view-'+nombreVista).classList.add('active');
 }
+
 function irAAgente(agenteId, termino){
   irAVista('agentes');
   const buscador = document.getElementById('buscar-agente');
   if(buscador){ buscador.value = termino || ''; renderAgentesTabla(); }
   ocultarResultadosGlobales();
 }
+
 function buscarGlobal(){
   const termino = document.getElementById('buscador-global').value.trim().toLowerCase();
   const el = document.getElementById('resultados-globales');
   if(!termino){ el.style.display = 'none'; return; }
+
   const matchAgentes = agentes.filter(a =>
     (a.nombre||'').toLowerCase().includes(termino) ||
     (a.placa||'').toLowerCase().includes(termino) ||
     (a.nombreOOC||'').toLowerCase().includes(termino)
   ).slice(0,5);
+
   const matchBitacoras = bitacoras.filter(b => (b.desc||'').toLowerCase().includes(termino)).slice(0,5);
   const matchSanciones = sanciones.filter(s => (s.motivo||'').toLowerCase().includes(termino)).slice(0,5);
+
   if(!matchAgentes.length && !matchBitacoras.length && !matchSanciones.length){
     el.innerHTML = '<div style="padding:14px; font-size:12px; color:var(--paper-dim);">Sin resultados.</div>';
     el.style.display = 'block';
     return;
   }
+
   const fila = (icono, titulo, subtitulo, onclick) => `
     <div onclick="${onclick}" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid var(--navy-700); display:flex; gap:10px; align-items:center;"
       onmouseover="this.style.background='var(--navy-700)'" onmouseout="this.style.background='transparent'">
@@ -3343,6 +3586,7 @@ function buscarGlobal(){
         <div style="font-size:10.5px; color:var(--paper-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${subtitulo}</div>
       </div>
     </div>`;
+
   let html = '';
   if(matchAgentes.length){
     html += '<div style="padding:8px 14px 2px; font-size:10px; color:var(--brass-dim); letter-spacing:1px;">AGENTES</div>';
@@ -3359,12 +3603,14 @@ function buscarGlobal(){
   el.innerHTML = html;
   el.style.display = 'block';
 }
+
 function ocultarResultadosGlobales(){
   const el = document.getElementById('resultados-globales');
   if(el) el.style.display = 'none';
   const buscador = document.getElementById('buscador-global');
   if(buscador) buscador.value = '';
 }
+
 document.addEventListener('click', (e)=>{
   const buscador = document.getElementById('buscador-global');
   const resultados = document.getElementById('resultados-globales');
@@ -3373,21 +3619,23 @@ document.addEventListener('click', (e)=>{
     resultados.style.display = 'none';
   }
 });
+
 // ---------- ALTO CONTRASTE ----------
 function toggleAltoContraste(){
   document.body.classList.toggle('alto-contraste');
   const activo = document.body.classList.contains('alto-contraste');
-  localStorage.setItem('osiAltoContraste', activo ? '1' : '0');
+  localStorage.setItem('daiAltoContraste', activo ? '1' : '0');
   const estado = document.getElementById('estado-contraste');
   if(estado) estado.textContent = activo ? 'Activado' : 'Desactivado';
 }
-if(localStorage.getItem('osiAltoContraste') === '1'){
+
+if(localStorage.getItem('daiAltoContraste') === '1'){
   document.body.classList.add('alto-contraste');
   const estadoInicial = document.getElementById('estado-contraste');
   if(estadoInicial) estadoInicial.textContent = 'Activado';
 }
-initAuth();
 
+initAuth();
 </script>
 </body>
 </html>
