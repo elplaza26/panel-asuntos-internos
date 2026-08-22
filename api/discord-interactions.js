@@ -78,10 +78,11 @@ async function crearBitacora(agenteId) {
 async function cerrarBitacora(turno) {
   const salida = Date.now();
   const duracionMin = Math.max(1, Math.round((salida - turno.entradaTs) / 60000));
-  const h50 = duracionMin >= 50;
-  const datos = { salidaTs: salida, estadoTurno: 'completado', duracionMin, h50 };
-  if (h50) datos.validacionH50 = 'pendiente';
-  await db.collection('bitacoras').doc(turno.id).update(datos);
+  await db.collection('bitacoras').doc(turno.id).update({
+    salidaTs: salida,
+    estadoTurno: 'completado',
+    duracionMin,
+  });
   return duracionMin;
 }
 
@@ -127,7 +128,7 @@ export default async function handler(req, res) {
     const discordUserId = interaction.member?.user?.id || interaction.user?.id;
 
     // Botón "Postularme al cuerpo" — no requiere estar registrado todavía
-    if (customId === 'postularme') {
+    if (customId === 'postularme' || customId === 'postularme_2') {
       res.status(200).json({
         type: 9,
         data: {
