@@ -127,8 +127,41 @@ export default async function handler(req, res) {
     const customId = interaction.data.custom_id;
     const discordUserId = interaction.member?.user?.id || interaction.user?.id;
 
+    // Botón "Presolicitar" (canal 2) — solo asigna el rol de Preseleccionado, no toca la base de datos
+    if (customId === 'postularme_2') {
+      const rolPreseleccionadoId = process.env.DISCORD_ROLE_PRESELECCIONADO_ID || '1540787125056835625';
+      try {
+        const rolesActuales = interaction.member?.roles || [];
+        if (rolesActuales.includes(rolPreseleccionadoId)) {
+          res.status(200).json({
+            type: 4,
+            data: { content: 'ℹ️ Ya tienes el rol de Preseleccionado. Usa el botón "Solicitar rango" en el canal correspondiente para completar tu ingreso.', flags: 64 },
+          });
+          return;
+        }
+        const addRes = await fetch(
+          `https://discord.com/api/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${rolPreseleccionadoId}`,
+          { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
+        );
+        if (addRes.ok) {
+          res.status(200).json({
+            type: 4,
+            data: { content: '✅ ¡Listo! Ya tienes el rol de **Preseleccionado**. Ahora puedes usar el botón "Solicitar rango" en el canal correspondiente para completar tu ingreso.', flags: 64 },
+          });
+        } else {
+          res.status(200).json({
+            type: 4,
+            data: { content: '⚠️ No se pudo asignar el rol. Avisa a Asuntos Internos.', flags: 64 },
+          });
+        }
+      } catch (e) {
+        res.status(200).json({ type: 4, data: { content: 'Ocurrió un error al asignar tu rol. Intenta de nuevo.', flags: 64 } });
+      }
+      return;
+    }
+
     // Botón "Postularme al cuerpo" — no requiere estar registrado todavía
-    if (customId === 'postularme' || customId === 'postularme_2') {
+    if (customId === 'postularme') {
       res.status(200).json({
         type: 9,
         data: {
