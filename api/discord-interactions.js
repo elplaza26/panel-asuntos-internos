@@ -127,36 +127,21 @@ export default async function handler(req, res) {
     const customId = interaction.data.custom_id;
     const discordUserId = interaction.member?.user?.id || interaction.user?.id;
 
-    // Botón "Presolicitar" (canal 2) — solo asigna el rol de Preseleccionado, no toca la base de datos
+    // Botón "Presolicitar" (canal 2) — abre el mismo formulario, pero al enviarlo SOLO asigna el rol (ver más abajo)
     if (customId === 'postularme_2') {
-      const rolPreseleccionadoId = process.env.DISCORD_ROLE_PRESELECCIONADO_ID || '1540787125056835625';
-      try {
-        const rolesActuales = interaction.member?.roles || [];
-        if (rolesActuales.includes(rolPreseleccionadoId)) {
-          res.status(200).json({
-            type: 4,
-            data: { content: 'ℹ️ Ya tienes el rol de Preseleccionado. Usa el botón "Solicitar rango" en el canal correspondiente para completar tu ingreso.', flags: 64 },
-          });
-          return;
-        }
-        const addRes = await fetch(
-          `https://discord.com/api/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${rolPreseleccionadoId}`,
-          { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
-        );
-        if (addRes.ok) {
-          res.status(200).json({
-            type: 4,
-            data: { content: '✅ ¡Listo! Ya tienes el rol de **Preseleccionado**. Ahora puedes usar el botón "Solicitar rango" en el canal correspondiente para completar tu ingreso.', flags: 64 },
-          });
-        } else {
-          res.status(200).json({
-            type: 4,
-            data: { content: '⚠️ No se pudo asignar el rol. Avisa a Asuntos Internos.', flags: 64 },
-          });
-        }
-      } catch (e) {
-        res.status(200).json({ type: 4, data: { content: 'Ocurrió un error al asignar tu rol. Intenta de nuevo.', flags: 64 } });
-      }
+      res.status(200).json({
+        type: 9,
+        data: {
+          custom_id: 'form_presolicitud',
+          title: 'Presolicitud de Ingreso',
+          components: [
+            { type: 1, components: [{ type: 4, custom_id: 'nombre_ic', label: 'Nombre del personaje (IC)', style: 1, required: true, max_length: 80 }] },
+            { type: 1, components: [{ type: 4, custom_id: 'nombre_ooc', label: 'Tu nombre o usuario (OOC)', style: 1, required: true, max_length: 80 }] },
+            { type: 1, components: [{ type: 4, custom_id: 'placa', label: 'Número de placa (si ya lo tienes)', style: 1, required: false, max_length: 10 }] },
+            { type: 1, components: [{ type: 4, custom_id: 'aprobado_por', label: 'Reclutador que autorizó tu ingreso', style: 1, required: true, max_length: 80 }] },
+          ],
+        },
+      });
       return;
     }
 
@@ -220,6 +205,40 @@ export default async function handler(req, res) {
   // Envío de un formulario (modal)
   if (interaction.type === 5) {
     const customId = interaction.data.custom_id;
+
+    if (customId === 'form_presolicitud') {
+      const discordUserId = interaction.member?.user?.id || interaction.user?.id;
+      const rolPreseleccionadoId = process.env.DISCORD_ROLE_PRESELECCIONADO_ID || '1540787125056835625';
+
+      try {
+        const rolesActuales = interaction.member?.roles || [];
+        if (rolesActuales.includes(rolPreseleccionadoId)) {
+          res.status(200).json({
+            type: 4,
+            data: { content: 'ℹ️ Ya tienes el rol de Preseleccionado. Usa el botón "Solicitar rango" en el canal correspondiente para completar tu ingreso.', flags: 64 },
+          });
+          return;
+        }
+        const addRes = await fetch(
+          `https://discord.com/api/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${rolPreseleccionadoId}`,
+          { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
+        );
+        if (addRes.ok) {
+          res.status(200).json({
+            type: 4,
+            data: { content: '✅ ¡Listo! Ya tienes el rol de **Preseleccionado**. Esto NO creó ningún expediente todavía — ahora usa el botón "Solicitar rango" en el canal correspondiente para completar tu ingreso real.', flags: 64 },
+          });
+        } else {
+          res.status(200).json({
+            type: 4,
+            data: { content: '⚠️ No se pudo asignar el rol. Avisa a Asuntos Internos.', flags: 64 },
+          });
+        }
+      } catch (e) {
+        res.status(200).json({ type: 4, data: { content: 'Ocurrió un error al asignar tu rol. Intenta de nuevo.', flags: 64 } });
+      }
+      return;
+    }
 
     if (customId === 'form_postulacion') {
       const discordUserId = interaction.member?.user?.id || interaction.user?.id;
