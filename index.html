@@ -924,6 +924,9 @@
         </div>
       </div>
 
+      <div class="section-title">Presolicitudes pendientes (Preselección)</div>
+      <div id="tabla-presolicitudes" style="margin-bottom:24px;"></div>
+
       <div class="section-title">Solicitudes de ingreso pendientes</div>
       <div id="tabla-pendientes-ingreso"></div>
     </section>
@@ -1178,6 +1181,7 @@ let sanciones = [];
 let bonos = [];
 let ausencias = [];
 let anuncios = [];
+let presolicitudes = [];
 let historialRangos = [];
 let canalStrikesId = '';
 let canalWarningsId = '';
@@ -1269,6 +1273,11 @@ function initListeners(){
   db.collection('anuncios').onSnapshot(snap=>{
     anuncios = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
     renderAnuncios();
+  }, ()=>showToast('Error de conexión con la base de datos'));
+
+  db.collection('presolicitudes').onSnapshot(snap=>{
+    presolicitudes = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    renderPresolicitudesTabla();
   }, ()=>showToast('Error de conexión con la base de datos'));
 
   db.collection('denunciasChecklist').onSnapshot(snap=>{
@@ -1637,6 +1646,76 @@ function toggleDetalleIngreso(id){
   if(!el) return;
   const visible = el.style.display === 'grid';
   el.style.display = visible ? 'none' : 'grid';
+}
+
+const ROL_PRESELECCIONADO_ID = '1540787125056835625';
+
+function renderPresolicitudesTabla(){
+  const el = document.getElementById('tabla-presolicitudes');
+  if(!el) return;
+  if(!presolicitudes.length){ el.innerHTML = '<div class="empty">No hay presolicitudes pendientes.</div>'; return; }
+
+  el.innerHTML = presolicitudes.map(p=>`
+    <div class="panel" style="margin-bottom:12px; padding:16px 18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-family:var(--font-display); font-size:15.5px; display:flex; align-items:center; gap:10px;">
+            ${p.nombreIC || '—'}
+            <span class="pill pendiente">Pendiente</span>
+          </div>
+          <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">
+            Discord: ${p.discordUsername || '—'} · ${p.creado? fmtHora(p.creado) : '—'}
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn" style="padding:8px 16px; font-size:11.5px;" onclick="aprobarPresolicitud('${p.id}')">Aprobar (asignar Preseleccionado)</button>
+          <button class="btn danger" style="padding:8px 16px; font-size:11.5px;" onclick="rechazarPresolicitud('${p.id}')">Rechazar</button>
+        </div>
+      </div>
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--navy-700); display:grid; grid-template-columns: repeat(2, 1fr); gap:14px;">
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Edad IC / OOC</div><div>${p.edades || '—'}</div></div>
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Máximo rango alcanzado</div><div>${p.maximoRango || '—'}</div></div>
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Experiencia en rol</div><div style="white-space:pre-wrap;">${p.experienciaRol || '—'}</div></div>
+        <div><div style="font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Experiencia policial / tiempo roleando</div><div style="white-space:pre-wrap;">${p.experienciaPolicia || '—'}</div></div>
+      </div>
+    </div>`).join('');
+}
+
+async function aprobarPresolicitud(id){
+  const p = presolicitudes.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`¿Aprobar la presolicitud de ${p.nombreIC}? Se le asignará el rol de Preseleccionado en Discord.`)) return;
+  try{
+    if(p.discord){
+      const resp = await fetch('/api/discord-role-update', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ discordUserId: p.discord, rolNuevoId: ROL_PRESELECCIONADO_ID })
+      });
+      const texto = await resp.text();
+      let data; try{ data = JSON.parse(texto); }catch(e){ data = null; }
+      if(!data || (data.errores && data.errores.length)){
+        showToast('Aprobada, pero hubo un problema asignando el rol en Discord — revisa la consola');
+        console.error(texto);
+      }
+    }else{
+      showToast('Aprobada (sin ID de Discord, no se pudo asignar el rol)');
+    }
+    await db.collection('presolicitudes').doc(id).delete();
+    registrarAuditoria(`Aprobó la presolicitud de ${p.nombreIC} y le asignó el rol de Preseleccionado`);
+    showToast(`${p.nombreIC} — presolicitud aprobada`);
+  }catch(e){ showToast('Error al aprobar la presolicitud'); }
+}
+
+async function rechazarPresolicitud(id){
+  const p = presolicitudes.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`¿Rechazar la presolicitud de ${p.nombreIC}? No se le asignará ningún rol.`)) return;
+  try{
+    await db.collection('presolicitudes').doc(id).delete();
+    registrarAuditoria(`Rechazó la presolicitud de ${p.nombreIC}`);
+    showToast('Presolicitud rechazada');
+  }catch(e){ showToast('Error al rechazar'); }
 }
 
 function siguientePlacaSugerida(){
